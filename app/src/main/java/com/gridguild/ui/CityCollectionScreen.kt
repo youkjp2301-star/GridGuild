@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,14 +44,14 @@ import com.gridguild.core.*
                 Text("${district.name}의 도시",style=MaterialTheme.typography.headlineMedium)
                 Text("충전의 성과가 쌓여, 새로운 풍경이 열립니다.",color=Subtle,fontSize=14.sp)
             }
-            Surface(color=Color.White,shape=RoundedCornerShape(14.dp),border=BorderStroke(1.dp,Line)) {
+            Surface(color=Paper,shape=RoundedCornerShape(14.dp),border=BorderStroke(1.dp,Line)) {
                 Column(Modifier.padding(horizontal=18.dp,vertical=12.dp),horizontalAlignment=Alignment.CenterHorizontally) {
                     Text("$current / 12",fontSize=20.sp,fontWeight=FontWeight.Bold,color=Ink)
                     Text("도시 해금",fontSize=12.sp,color=Subtle)
                 }
             }
         }
-        Surface(color=Color.White,shape=RoundedCornerShape(24.dp),border=BorderStroke(1.dp,Line),shadowElevation=1.dp) {
+        Surface(color=Paper,shape=RoundedCornerShape(24.dp),border=BorderStroke(1.dp,Line),shadowElevation=1.dp) {
             Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(15.dp)) {
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     Surface(color=if(previous)Pale else SoftGreen,shape=RoundedCornerShape(8.dp)) {
@@ -65,7 +66,7 @@ import com.gridguild.core.*
                     }
                     IconButton(onClick={details=true}) { Icon(Icons.Outlined.Info,"도시 정보",tint=Subtle) }
                 }
-                Crossfade(targetState=shown.level,animationSpec=tween(400),label="unlockedCity") { displayed ->
+                Crossfade(targetState=shown.level,animationSpec=tween(if(motionEnabled())400 else 0),label="unlockedCity") { displayed ->
                     CityCanvas(displayed,district.id,current,Modifier.fillMaxWidth().aspectRatio(2f).testTag("cityScene"),zoom)
                 }
                 Row(verticalAlignment=Alignment.CenterVertically) {
@@ -75,7 +76,7 @@ import com.gridguild.core.*
                 }
                 HorizontalDivider(color=Line)
                 CityGrowthSummary(xp,current){nextInfo=true}
-                LinearProgressIndicator(progress={CityLevels.progress(xp)},modifier=Modifier.fillMaxWidth().height(6.dp),color=Gold,trackColor=Color(0xFFF0F2F2))
+                LinearProgressIndicator(progress={CityLevels.progress(xp)},modifier=Modifier.fillMaxWidth().height(6.dp),color=Green,trackColor=SoftGreen)
             }
         }
         Row(verticalAlignment=Alignment.CenterVertically) {
@@ -90,9 +91,10 @@ import com.gridguild.core.*
                 val unlocked=CityUnlocks.canView(cityLevel,current)
                 Surface(onClick={if(unlocked)selection=cityLevel},enabled=unlocked,
                     modifier=Modifier.width(180.dp).testTag("city-stage-$cityLevel").semantics {
+                        selected=shown.level==cityLevel
                         contentDescription=if(unlocked)"해금된 도시 Lv.$cityLevel" else "잠긴 도시 Lv.$cityLevel"
                     },
-                    color=Color.White,shape=RoundedCornerShape(18.dp),border=BorderStroke(if(shown.level==cityLevel)2.dp else 1.dp,if(shown.level==cityLevel)Green else Line)) {
+                    color=Paper,shape=RoundedCornerShape(18.dp),border=BorderStroke(if(shown.level==cityLevel)2.dp else 1.dp,if(shown.level==cityLevel)Green else Line)) {
                     Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
                         if(unlocked) CityCanvas(cityLevel,district.id,current,Modifier.fillMaxWidth().height(87.dp))
                         else LockedCityArtwork(Modifier.fillMaxWidth().height(87.dp),compact=true)

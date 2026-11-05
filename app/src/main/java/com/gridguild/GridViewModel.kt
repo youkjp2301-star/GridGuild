@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.gridguild.core.*
 import com.gridguild.data.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import java.util.UUID
 
@@ -18,7 +19,8 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
     val navigation = MutableStateFlow(NavigationState())
     val ready = MutableStateFlow(false)
     val message = MutableStateFlow("")
-    val reward = MutableStateFlow(0)
+    private val rewardQueue = Channel<XpVisualEvent>(Channel.UNLIMITED)
+    val rewards = rewardQueue.receiveAsFlow()
     val now = MutableStateFlow(System.currentTimeMillis())
     val vehicleReading = combine(vehicle,now) { sample,_ -> VehicleReading.capture(sample,System.currentTimeMillis()) }
         .stateIn(viewModelScope,SharingStarted.Eagerly,VehicleReading(VehicleState(),false))
@@ -38,11 +40,10 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             store.state.catch { message.value="저장 데이터 읽기 실패: ${it.message}" }.collect { next ->
                 val old=game.value
-                if (ready.value && next.xp > old.xp) {
-                    reward.value=next.xp-old.xp
-                    launch { delay(3_000); reward.value=0 }
-                }
+                val presentation=if(ready.value)XpVisualEvent.between(old,next) else null
                 game.value=next; ready.value=true
+                // Publish the committed balance before waking an immediate UI collector.
+                presentation?.let{rewardQueue.trySend(it)}
                 if(next.mission?.stationId==startingMission.value || old.mode!=next.mode) startingMission.value=null
                 if (foreground && activeMode!=next.mode) connect(next.mode)
             }
@@ -111,7 +112,10 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
         }
         if(!startingMission.compareAndSet(null,station.id)) return
         viewModelScope.launch {
-            if(!mutate { MissionEngine.start(it,station,vehicle.value,System.currentTimeMillis(),"${station.id}:${UUID.randomUUID()}") }) startingMission.value=null
+            if(!mutate {
+                require(platformAllowed.value && safety.value.allowsGame(System.currentTimeMillis())){"주차 상태를 다시 확인하세요"}
+                MissionEngine.start(it,station,vehicle.value,System.currentTimeMillis(),"${station.id}:${UUID.randomUUID()}")
+            }) startingMission.value=null
         }
     }
     fun registerHomeCharger(name: String) = action {
@@ -165,7 +169,7 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
             } else state
         }
         if(saved && authorized) {
-            reward.value=0
+            while(rewardQueue.tryReceive().isSuccess) { /* Reset also dismisses pending presentations. */ }
             if(target==DemoResetTarget.CHARGING_MISSIONS || target==DemoResetTarget.ALL) startingMission.value=null
             if(target==DemoResetTarget.ALL) (vehicleRepo as? MockVehicleRepository)?.set(42f,ChargeSignal.OFF)
             message.value=when(target) {

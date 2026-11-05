@@ -1,0 +1,152 @@
+package com.gridguild.ui
+
+import android.provider.Settings
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.*
+import com.gridguild.R
+import com.gridguild.core.CityLevels
+import com.gridguild.core.XpVisualEvent
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlin.math.roundToInt
+
+/** OS motion preference is respected; vehicle safety is still gated by the caller. */
+@Composable internal fun motionEnabled(): Boolean {
+    val context=LocalContext.current
+    return Settings.Global.getFloat(context.contentResolver,Settings.Global.ANIMATOR_DURATION_SCALE,1f)>0f
+}
+
+@Composable internal fun GuildNavItem(label: String,icon: ImageVector,selected: Boolean,wide: Boolean,tag: String,onClick:()->Unit) {
+    val interactions=remember{MutableInteractionSource()}
+    val hovered by interactions.collectIsHoveredAsState()
+    val focused by interactions.collectIsFocusedAsState()
+    val pressed by interactions.collectIsPressedAsState()
+    val fill by animateColorAsState(if(selected)SoftGreen else if(hovered || focused)Pale else Color.Transparent,tween(160),label="navigationFill")
+    val scale by animateFloatAsState(if(pressed).96f else 1f,spring(dampingRatio=.65f,stiffness=650f),label="navigationPress")
+    Column(Modifier.then(if(wide)Modifier.fillMaxWidth() else Modifier.widthIn(min=64.dp))
+        .heightIn(min=64.dp).graphicsLayer{scaleX=scale;scaleY=scale}
+        .clip(RoundedCornerShape(22.dp)).background(fill)
+        .border(if(focused)2.dp else 1.dp,if(focused)Green else if(selected)Line else Color.Transparent,RoundedCornerShape(22.dp))
+        .hoverable(interactions).selectable(selected=selected,interactionSource=interactions,indication=LocalIndication.current,role=Role.Tab,onClick=onClick)
+        .testTag(tag).semantics{stateDescription=if(pressed)"누름" else if(hovered)"가리킴" else if(selected)"선택됨" else "대기"}
+        .padding(horizontal=16.dp,vertical=10.dp),
+        horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)) {
+        Icon(icon,null,tint=if(selected)Green else Subtle,modifier=Modifier.size(23.dp))
+        Text(label,fontSize=13.sp,color=if(selected)Ink else Subtle,fontWeight=if(selected)FontWeight.SemiBold else FontWeight.Normal)
+    }
+}
+
+@Composable internal fun GuildPage(tab: Int,modifier: Modifier=Modifier,content: @Composable (Int)->Unit) {
+    val holder=rememberSaveableStateHolder()
+    val motion=motionEnabled()
+    AnimatedContent(tab,modifier.clip(RoundedCornerShape(20.dp)),transitionSpec={
+        val direction=if(targetState>initialState)1 else -1
+        if(motion) (slideInHorizontally(tween(300,easing=FastOutSlowInEasing)){it*direction/7}+fadeIn(tween(210))) togetherWith
+            (slideOutHorizontally(tween(240,easing=FastOutSlowInEasing)){-it*direction/9}+fadeOut(tween(160)))
+        else EnterTransition.None togetherWith ExitTransition.None
+    },label="directionalPage") { destination ->
+        holder.SaveableStateProvider(destination) { Box(Modifier.fillMaxSize().testTag("page$destination")){content(destination)} }
+    }
+}
+
+/** Four dedicated construction keyframes. Cosmetic assembly, never a preview of a locked level. */
+@Composable internal fun CityGrowthLoading(modifier: Modifier=Modifier,animate: Boolean=true,label: String="도시를 준비하고 있어요") {
+    val atlas=ImageBitmap.imageResource(R.drawable.city_loading_v2)
+    var phase by remember{mutableIntStateOf(0)}
+    val moving=animate && motionEnabled()
+    LaunchedEffect(moving) {
+        if(moving)while(true){delay(620);phase=(phase+1)%4} else phase=3
+    }
+    Column(modifier.padding(20.dp).testTag("cityLoading"),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(16.dp)) {
+        Crossfade(phase,animationSpec=tween(if(moving)260 else 0),label="constructionFrame") { frame ->
+            Canvas(Modifier.fillMaxWidth().aspectRatio(2f).semantics{contentDescription="장식용 도시 조립 ${frame+1}/4"}) {
+                val w=atlas.width/2;val h=atlas.height/2
+                drawImage(atlas,IntOffset((frame%2)*w+2,(frame/2)*h+2),IntSize(w-4,h-4),
+                    dstSize=IntSize(size.width.roundToInt(),size.height.roundToInt()),filterQuality=FilterQuality.High)
+            }
+        }
+        Text(label,color=Ink,fontWeight=FontWeight.SemiBold,fontSize=20.sp)
+        Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
+            repeat(4){i->Box(Modifier.size(if(i==phase)9.dp else 6.dp).background(if(i==phase)Green else Line,RoundedCornerShape(4.dp)))}
+        }
+    }
+}
+
+/** Channel delivery consumes an award once, including across activity recreation. */
+@Composable internal fun XpRewardHost(events: Flow<XpVisualEvent>,allowed: Boolean,cityXp: Int,currentXp: ()->Int,modifier: Modifier=Modifier) {
+    var event by remember{mutableStateOf<XpVisualEvent?>(null)}
+    val progress=remember{Animatable(0f)}
+    val latestXp by rememberUpdatedState(currentXp)
+    val moving=motionEnabled()
+    LaunchedEffect(events,allowed,moving) {
+        event=null
+        events.collect { award ->
+            if(allowed && award.cityTotal<=latestXp()) {
+                progress.snapTo(0f);event=award
+                try {
+                    if(moving)progress.animateTo(1f,tween(1200,easing=LinearOutSlowInEasing)) else progress.snapTo(1f)
+                    delay(if(moving)1300 else 900)
+                } finally { event=null }
+            }
+        }
+    }
+    // A reset invalidates the currently displayed total without emitting a new award.
+    LaunchedEffect(cityXp){if((event?.cityTotal ?: 0)>cityXp)event=null}
+    if(allowed)event?.let { award -> XpRewardCard(award,progress.value,modifier) }
+}
+
+@Composable internal fun XpRewardCard(award: XpVisualEvent,progress: Float,modifier: Modifier=Modifier) {
+    val displayed=award.cityBefore+(award.cityGain*progress).roundToInt()
+    // A non-clickable Material Surface still blocks pointer propagation. This decoration must
+    // never swallow navigation or a mission click underneath it.
+    Box(modifier.widthIn(max=470.dp).fillMaxWidth().testTag("xpReward")
+        .shadow(12.dp,RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp))
+        .background(Paper).border(1.dp,Line,RoundedCornerShape(24.dp))) {
+        Column(Modifier.padding(horizontal=24.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment=Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("좋은 충전이 도시의 성장으로",color=Subtle,fontSize=12.sp)
+                    Text("+${award.personalGain} 데모 XP",fontSize=23.sp,fontWeight=FontWeight.Bold,color=Green)
+                }
+                Text("도시 $displayed XP",fontWeight=FontWeight.SemiBold,fontSize=14.sp)
+            }
+            Box(Modifier.fillMaxWidth().height(45.dp)) {
+                LinearProgressIndicator(progress={CityLevels.progress(displayed)},color=Green,trackColor=SoftGreen,
+                    modifier=Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)))
+                Canvas(Modifier.matchParentSize()) {
+                    repeat(7){i->
+                        val t=((progress-i*.045f)/.66f).coerceIn(0f,1f)
+                        if(t>0f && t<1f) {
+                            val start=Offset(size.width*(.08f+i*.095f),0f)
+                            val end=Offset(size.width*.72f,size.height-5.dp.toPx())
+                            val p=Offset(start.x+(end.x-start.x)*t,start.y+(end.y-start.y)*t*t)
+                            rotate(12f+i*9f,p){drawRoundRect(if(i%2==0)Green else Color(0xFF6EA892),p-Offset(4.dp.toPx(),4.dp.toPx()),androidx.compose.ui.geometry.Size(8.dp.toPx(),8.dp.toPx()),androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()))}
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

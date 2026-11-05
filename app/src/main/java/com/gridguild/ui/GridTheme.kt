@@ -10,15 +10,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-internal val Blue=Color(0xFF315F79)
-internal val Ink=Color(0xFF19384B)
-internal val Subtle=Color(0xFF586F7C)
-internal val Pale=Color(0xFFE6EEF2)
-internal val Bg=Color(0xFFF3F6F7)
-internal val Green=Color(0xFF247B70)
-internal val Gold=Color(0xFFAD8A56)
-internal val Line=Color(0xFFDDE6EA)
-internal val SoftGreen=Color(0xFFE5F1EB)
+internal val Blue=Color(0xFF41604B)
+internal val Ink=Color(0xFF252B26)
+internal val Subtle=Color(0xFF647064)
+internal val Pale=Color(0xFFEAE7DE)
+internal val Bg=Color(0xFFF7F4ED)
+internal val Paper=Color(0xFFFFFDF8)
+internal val Green=Color(0xFF3F775C)
+internal val Gold=Color(0xFFB88A43)
+internal val Line=Color(0xFFDEDCD3)
+internal val SoftGreen=Color(0xFFE4ECE2)
 
 @Composable internal fun GridTheme(content: @Composable ()->Unit) {
     MaterialTheme(
@@ -26,11 +27,11 @@ internal val SoftGreen=Color(0xFFE5F1EB)
             primary=Blue,onPrimary=Color.White,primaryContainer=Pale,onPrimaryContainer=Ink,
             secondary=Green,onSecondary=Color.White,secondaryContainer=SoftGreen,onSecondaryContainer=Color(0xFF18564E),
             tertiary=Gold,onTertiary=Color.White,tertiaryContainer=Color(0xFFF4EEDF),onTertiaryContainer=Color(0xFF624921),
-            background=Bg,onBackground=Ink,surface=Color.White,onSurface=Ink,
-            surfaceTint=Blue,surfaceDim=Color(0xFFE3E9EC),surfaceBright=Color.White,
-            surfaceContainerLowest=Color.White,surfaceContainerLow=Color(0xFFF6F8F9),
-            surfaceContainer=Bg,surfaceContainerHigh=Color(0xFFEDF2F4),surfaceContainerHighest=Color(0xFFE7EDF0),
-            surfaceVariant=Color(0xFFEBF0F2),onSurfaceVariant=Subtle,outline=Color(0xFF93A8B4),outlineVariant=Line,
+            background=Bg,onBackground=Ink,surface=Paper,onSurface=Ink,
+            surfaceTint=Blue,surfaceDim=Pale,surfaceBright=Paper,
+            surfaceContainerLowest=Paper,surfaceContainerLow=Bg,
+            surfaceContainer=Bg,surfaceContainerHigh=Color(0xFFF0EEE5),surfaceContainerHighest=Pale,
+            surfaceVariant=Pale,onSurfaceVariant=Subtle,outline=Color(0xFF99A18F),outlineVariant=Line,
             error=Color(0xFFAA4C48),onError=Color.White),
         typography=Typography(
             headlineLarge=TextStyle(fontSize=32.sp,lineHeight=40.sp,fontWeight=FontWeight.Bold,letterSpacing=(-.6).sp),

@@ -6,7 +6,7 @@ data class CityStage(val level: Int, val era: Int, val frame: Int, val landmark:
     companion object {
         private val landmarks = listOf("강변 목조 마을", "성문과 돌다리", "시장과 종탑", "강변 산업 지구", "도심 광장", "트램과 업무 지구", "태양광 연구 단지", "스마트 교통 허브", "수변 생태 공원", "공중 연결 산책로", "하늘 정원 타워", "미래 도시 랜드마크")
         private val descriptions = listOf(
-            "푸른 지붕의 목조 주택과 작은 농원이 강변에 자리 잡습니다.",
+            "석재·목재·회벽으로 지은 주택과 공방, 작은 농원이 강변에 자리 잡습니다.",
             "성문과 성벽이 들어서고, 돌다리와 물레방앗간이 마을을 연결합니다.",
             "중앙 시장과 종탑을 중심으로 풍성한 도시가 형성됩니다.",
             "벽돌 공방과 강변 산업 시설이 도시의 새 시대를 엽니다.",

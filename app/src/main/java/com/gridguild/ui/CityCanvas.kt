@@ -8,7 +8,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.asImageBitmap
+import android.graphics.BitmapFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,12 +45,26 @@ import kotlin.math.roundToInt
     }
     val stage=CityStage.at(level)
     val resource=when(stage.era) {
-        0 -> R.drawable.city_medieval_v2
-        1 -> R.drawable.city_modern_v2
-        else -> R.drawable.city_future_v2
+        0 -> R.drawable.city_medieval_v4
+        1 -> R.drawable.city_modern_v4
+        else -> R.drawable.city_future_v4
     }
-    val atlas=ImageBitmap.imageResource(resource)
-    Canvas(modifier.clip(RoundedCornerShape(16.dp)).background(Color(0xFF18242B)).semantics {
+    val context=LocalContext.current
+    var retry by remember(resource){mutableIntStateOf(0)}
+    val loaded by produceState<Pair<Int,Result<ImageBitmap>>?>(null,resource,retry) {
+        value=withContext(Dispatchers.IO){resource to runCatching{CityArtCache.load(context.resources,resource)}}
+    }
+    // produceState retains its last value across key changes. Never render that previous era
+    // with the new level's frame coordinates (especially when an XP reset lowers the unlock).
+    val art=loaded?.takeIf{it.first==resource}?.second
+    val atlas=art?.getOrNull()
+    if(atlas==null) {
+        if(art?.isFailure==true) Box(modifier,contentAlignment=Alignment.Center) {
+            TextButton(onClick={retry++}){Text("도시 이미지 다시 불러오기")}
+        } else CityGrowthLoading(modifier,label="도시 풍경 불러오는 중")
+        return
+    }
+    Canvas(modifier.clip(RoundedCornerShape(20.dp)).background(Bg).semantics {
         contentDescription="${Busan.find(district)?.name ?: "도시"} Lv.${stage.level} ${stage.name} · ${stage.landmark}"
     }) {
         val frameWidth=atlas.width/2
@@ -59,9 +78,16 @@ import kotlin.math.roundToInt
     }
 }
 
+/** Bundled bitmap decoding is the loading source; no decorative minimum wait is imposed. */
+private object CityArtCache {
+    private val images=android.util.LruCache<Int,ImageBitmap>(3)
+    @Synchronized fun load(resources: android.content.res.Resources,id: Int): ImageBitmap =
+        images.get(id) ?: requireNotNull(BitmapFactory.decodeResource(resources,id)).asImageBitmap().also{images.put(id,it)}
+}
+
 /** Original geometric placeholder. It never reads or blurs an unreleased city image. */
 @Composable internal fun LockedCityArtwork(modifier: Modifier=Modifier,compact: Boolean=false) {
-    Box(modifier.clip(RoundedCornerShape(16.dp)).background(Brush.linearGradient(listOf(Color(0xFF1B3748),Color(0xFF304C5B))))) {
+    Box(modifier.clip(RoundedCornerShape(16.dp)).background(Brush.linearGradient(listOf(Color(0xFF263B2D),Color(0xFF405B48))))) {
         Canvas(Modifier.matchParentSize()) {
             fun point(x: Float,y: Float)=Offset(size.width*x,size.height*y)
             fun shape(points: List<Offset>,color: Color) {
