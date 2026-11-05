@@ -47,7 +47,7 @@ class DemoResetsTest {
     @Test fun dailyBonusIsReearnedOnlyAfterAllMissionsInTheNewTestRun() {
         fun completeAll(initial: GameState,run: Int): GameState {
             var state=initial
-            SampleData.stations.forEachIndexed { i,s ->
+            SampleData.dailyBonusStations.forEachIndexed { i,s ->
                 val at=time+run*20_000+i*2_000
                 state=MissionEngine.start(state,s,sample(at=at),at,"${s.id}:$run:$i")
                 state=MissionEngine.observe(state,sample(44f,at+1000),at+1000)

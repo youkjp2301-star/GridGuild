@@ -22,6 +22,7 @@ class NavigationFlowTest {
         runBlocking{store.update{GameState(districtId="sasang")}}
         ui.waitUntil(15_000){ui.onAllNodesWithTag("tab1").fetchSemanticsNodes().isNotEmpty()}
         ui.onNodeWithTag("tab1").performClick()
+        ui.onNodeWithTag("routeCharge").performClick()
         show("navTools");ui.onNodeWithTag("navTools").performClick()
     }
     private fun show(tag: String)=ui.onNodeWithTag("missionList").performScrollToNode(hasTestTag(tag))

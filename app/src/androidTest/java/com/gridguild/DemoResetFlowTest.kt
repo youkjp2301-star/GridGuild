@@ -71,6 +71,7 @@ class DemoResetFlowTest {
         assertEquals(470,state().xp);assertEquals(370,state().cityXp("sasang"))
         ui.onNodeWithTag("settings").performClick()
         ui.onNodeWithTag("tab1").performClick()
+        ui.onNodeWithTag("routeCharge").performClick()
         ui.onNodeWithTag("missionList").performScrollToNode(hasTestTag("mission-sasang-river"))
         ui.onNodeWithTag("mission-sasang-river").assertIsEnabled().performClick()
         ui.waitUntil(8_000){state().mission?.stationId=="sasang-river"}

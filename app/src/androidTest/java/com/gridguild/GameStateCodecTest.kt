@@ -18,7 +18,7 @@ class GameStateCodecTest {
         assertEquals(120,state.xp);assertEquals(120,state.cityXp("sasang"))
         assertTrue(state.history.single().countsForMission)
         val upgraded=GameStateCodec.encode(state)
-        assertEquals(2,JSONObject(upgraded).getInt("schema"))
+        assertEquals(3,JSONObject(upgraded).getInt("schema"))
         assertEquals(state,GameStateCodec.decode(upgraded))
     }
     @Test fun resetFlagsAndMissionStateSurvivePersistence() {
@@ -39,5 +39,15 @@ class GameStateCodecTest {
         assertThrows(JSONException::class.java) { GameStateCodec.decode(schema2.toString()) }
         assertThrows(IllegalArgumentException::class.java) { GameStateCodec.decode(JSONObject(legacy()).put("schema",99).toString()) }
         assertThrows(JSONException::class.java) { GameStateCodec.decode("broken") }
+    }
+    @Test fun schema2RouteAndSchema3HomePreferencesAndPendingBaselineSurvive() {
+        val old=JSONObject(GameStateCodec.encode(GameStateCodec.decode(legacy()))).put("schema",2)
+        old.remove("home")
+        val migrated=GameStateCodec.decode(old.toString())
+        assertEquals(HomeChargePreferences(),migrated.homeCharge);assertEquals(120,migrated.xp)
+        val state=migrated.copy(homeCharge=HomeChargePreferences("우리 집",80,450),
+            mission=Mission("home:test","home-charge","sasang",120,42f,DataSource.MOCK,1,
+                kind=MissionKind.HOME,windowStart=100,windowEnd=200,windowBaselineSoc=null,lastSampleAt=2))
+        assertEquals(state,GameStateCodec.decode(GameStateCodec.encode(state)))
     }
 }

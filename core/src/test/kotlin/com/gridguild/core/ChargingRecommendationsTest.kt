@@ -10,9 +10,9 @@ class ChargingRecommendationsTest {
         fun ids(id: String)=DemoDestinations.places.first{it.id==id}.let {
             ChargingRecommendations.around(it.lat,it.lon,42f).nearby.map{candidate->candidate.station.id}
         }
-        assertEquals(listOf("sasang-river"),ids("samnak"))
-        assertEquals(listOf("centum","gwangalli"),ids("centum"))
-        assertEquals(listOf("gwangalli","centum"),ids("gwangalli"))
+        assertEquals(listOf("sasang-river","sasang-park"),ids("samnak"))
+        assertEquals(listOf("centum","centum-campus","gwangalli","gwangalli-marina"),ids("centum"))
+        assertEquals(listOf("gwangalli","gwangalli-marina","centum","centum-campus"),ids("gwangalli"))
         assertTrue(ids("gijang").isEmpty());assertEquals(original,SampleData.stations)
     }
     @Test fun unknownCoordinatesAndHighSocAreDifferentFromAnEmptyArea() {

@@ -7,7 +7,7 @@ import kotlin.random.Random
 data class DemoDestination(val id: String,val name: String,val lat: Double,val lon: Double,val hint: String)
 object DemoDestinations {
     val places=listOf(
-        DemoDestination("samnak","삼락생태공원",35.1694,128.9780,"서부 · 삼락 충전소 1곳"),
+        DemoDestination("samnak","삼락생태공원",35.1694,128.9780,"서부 · 삼락 충전소 2곳"),
         DemoDestination("centum","센텀시티",35.1690,129.1300,"동부 · 센텀·광안 후보"),
         DemoDestination("gwangalli","광안리 해변",35.1530,129.1180,"해변 · 가까운 순서 변화"),
         DemoDestination("gijang","기장 해안",35.2440,129.2220,"주변 샘플 충전소 없는 예시"),

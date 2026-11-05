@@ -22,6 +22,7 @@ class DestinationDemoFlowTest {
         runBlocking{store.update{GameState(districtId="sasang")}}
         ui.waitUntil(15_000){ui.onAllNodesWithTag("tab1").fetchSemanticsNodes().isNotEmpty()}
         ui.onNodeWithTag("tab1").performClick()
+        ui.onNodeWithTag("routeCharge").performClick()
     }
     private fun show(tag: String)=ui.onNodeWithTag("missionList").performScrollToNode(hasTestTag(tag))
     private fun select(id: String) {
@@ -38,11 +39,13 @@ class DestinationDemoFlowTest {
         }
     }
     @Test fun changingDestinationAutomaticallyChangesVisibleNearbyStationsAndMap() {
-        show("nearbySummary");ui.onNodeWithTag("nearbySummary").assertTextContains("1곳",substring=true)
+        show("nearbySummary");ui.onNodeWithTag("nearbySummary").assertTextContains("2곳",substring=true)
+        show("nearbyMap")
         ui.onNodeWithTag("nearbyMap").assertExists()
         screenshot("destination-samnak.png")
         select("centum")
-        show("nearbySummary");ui.onNodeWithTag("nearbySummary").assertTextContains("2곳",substring=true)
+        show("nearbySummary");ui.onNodeWithTag("nearbySummary").assertTextContains("4곳",substring=true)
+        show("nearbyMap")
         screenshot("destination-centum.png")
         show("mission-centum");ui.onNodeWithTag("mission-centum").assertExists()
         ui.onNodeWithTag("mission-sasang-river").assertDoesNotExist()
@@ -77,7 +80,7 @@ class DestinationDemoFlowTest {
         show("nearbyReason");ui.onNodeWithTag("nearbyReason").assertTextContains("SOC 90%",substring=true)
         ui.onNodeWithTag("nearbyMap").assertDoesNotExist()
         ui.activityRule.scenario.onActivity { androidx.lifecycle.ViewModelProvider(it)[GridViewModel::class.java].mockSoc(89f) }
-        ui.waitUntil(8_000){ui.onAllNodesWithText("목적지 주변 충전소 · 1곳").fetchSemanticsNodes().isNotEmpty()}
+        ui.waitUntil(8_000){ui.onAllNodesWithText("목적지 주변 충전소 · 2곳").fetchSemanticsNodes().isNotEmpty()}
         show("nearbyMap");ui.onNodeWithTag("nearbyMap").assertExists()
     }
 }

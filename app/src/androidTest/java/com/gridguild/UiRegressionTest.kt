@@ -34,6 +34,7 @@ class UiRegressionTest {
         ui.onNodeWithTag("tab0").performClick()
         repeat(14) { ui.onNodeWithTag("batteryStatus").assertTextContains("데모 데이터 정상",substring=true);Thread.sleep(110) }
         ui.onNodeWithTag("tab1").performClick()
+        ui.onNodeWithTag("routeCharge").performClick()
         ui.onNodeWithTag("missionList").performScrollToNode(hasTestTag("mission-sasang-river"))
         repeat(36) {
             ui.onNodeWithTag("mission-sasang-river").assertIsEnabled().assertTextContains("미션 시작")
@@ -87,6 +88,7 @@ class UiRegressionTest {
         ui.onNodeWithTag("charge").assertExists()
         ui.onNodeWithTag("settings").performClick()
         ui.onNodeWithTag("tab1").performClick()
+        ui.onNodeWithTag("routeCharge").performClick()
         ui.onNodeWithTag("missionList").performScrollToNode(hasTestTag("mission-sasang-river"))
         ui.onNodeWithTag("mission-sasang-river").performClick()
         ui.waitUntil(8_000){runBlocking{store.state.first().mission!=null}}

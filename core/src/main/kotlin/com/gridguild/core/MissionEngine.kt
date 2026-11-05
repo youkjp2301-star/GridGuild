@@ -8,7 +8,7 @@ object MissionEngine {
         require(vehicle.usable(now)) { "최신 차량 데이터가 필요합니다" }
         require(vehicle.source == if (state.mode == AppMode.MOCK) DataSource.MOCK else DataSource.PLEOS)
         require(vehicle.soc!! <= 98f) { "SOC가 너무 높아 +2% 미션을 시작할 수 없습니다" }
-        require(station.inWindow(now)) { "권장 시간대에 시작하세요" }
+        require(station.inWindow(now)) { "미션 참여 가능 시간에 시작하세요. 충전소 운영시간과는 다릅니다" }
         require(state.history.none { it.id == id }) { "이미 사용한 미션 ID" }
         require(!state.completedToday(station.id,now)) { "오늘 이미 완료한 미션입니다" }
         return state.copy(mission = Mission(id, station.id, state.districtId, station.xp,
@@ -17,6 +17,7 @@ object MissionEngine {
 
     fun observe(state: GameState, vehicle: VehicleState, now: Long): GameState {
         val m = state.mission ?: return state
+        if(m.kind==MissionKind.HOME)return HomeChargeEngine.observe(state,vehicle,now)
         if (!vehicle.usable(now) || vehicle.source != m.source || vehicle.sampledAt <= m.startedAt) return state
         val station = SampleData.stations.firstOrNull { it.id == m.stationId } ?: return state
         if (!station.inWindow(now)) return state
@@ -32,7 +33,7 @@ object MissionEngine {
         val history = state.history + event
         val daily = history.filter { it.countsForMission && it.kind == "MISSION" && GameState.day(it.at) == GameState.day(now) }
         val bonusId = "daily:${GameState.day(now)}:${m.id}"
-        val eligible = SampleData.stations.map { it.id }.toSet()
+        val eligible = SampleData.dailyBonusStations.map { it.id }.toSet()
         // Fixture missions have station IDs embedded in unique mission IDs by the app.
         val done = daily.map { it.missionId.substringBefore(':') }.toSet()
         val bonus = if (done.containsAll(eligible) && eligible.isNotEmpty() && history.none {

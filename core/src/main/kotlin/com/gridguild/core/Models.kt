@@ -73,7 +73,12 @@ object SampleData {
         Station("sasang-river", "삼락 강변 충전소", "sasang", 35.1694, 128.9734, 120, 0, 24),
         Station("centum", "센텀 녹색 충전소", "haeundae", 35.1690, 129.1360, 100, 22, 7),
         Station("gwangalli", "광안 해변 충전소", "suyeong", 35.1530, 129.1180, 120, 0, 24),
+        Station("sasang-park", "삼락 공원 충전소", "sasang", 35.1760, 128.9840, 120, 0, 24),
+        Station("centum-campus", "센텀 캠퍼스 충전소", "haeundae", 35.1770, 129.1240, 120, 0, 24),
+        Station("gwangalli-marina", "광안 마리나 충전소", "suyeong", 35.1460, 129.1250, 120, 0, 24),
     )
+    // New location fixtures do not change the existing three-mission daily bonus contract.
+    val dailyBonusStations get() = stations.filter { it.id in setOf("sasang-river","centum","gwangalli") }
     // Fictional fixtures, never presented as real charging availability or real grid telemetry.
     fun recommend(lat: Double?, lon: Double?, soc: Float?): List<Station> =
         if (soc != null && soc >= 90f) emptyList() else stations.sortedBy { s ->
@@ -82,6 +87,7 @@ object SampleData {
         }
 }
 
+enum class MissionKind { ROUTE, HOME }
 data class Mission(
     val id: String,
     val stationId: String,
@@ -93,6 +99,11 @@ data class Mission(
     val chargingObserved: Boolean = false,
     val progress: Float = 0f,
     val requiredGain: Float = 2f,
+    val kind: MissionKind = MissionKind.ROUTE,
+    val windowStart: Long? = null,
+    val windowEnd: Long? = null,
+    val windowBaselineSoc: Float? = null,
+    val lastSampleAt: Long = 0,
 )
 data class PointEvent(
     val id: String, val missionId: String, val districtId: String,
@@ -108,6 +119,7 @@ data class GameState(
     val mode: AppMode = AppMode.MOCK,
     val mission: Mission? = null,
     val history: List<PointEvent> = emptyList(),
+    val homeCharge: HomeChargePreferences = HomeChargePreferences(),
 ) {
     val xp get() = history.filter { it.personalCredit }.sumOf { it.xp }
     fun cityXp(id: String?) = history.filter { it.cityCredit && it.districtId == id }.sumOf { it.xp }

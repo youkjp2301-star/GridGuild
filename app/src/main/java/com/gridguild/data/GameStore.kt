@@ -21,11 +21,17 @@ class GameStore(context: Context) {
 
 internal object GameStateCodec {
     fun encode(s: GameState): String = JSONObject().apply {
-        put("schema",2); put("district",s.districtId); put("mode",s.mode.name)
+        put("schema",3); put("district",s.districtId); put("mode",s.mode.name)
+        put("home",JSONObject().apply {
+            put("charger",s.homeCharge.chargerName);put("target",s.homeCharge.targetSoc);put("departure",s.homeCharge.departureMinutes)
+        })
         s.mission?.let { m -> put("mission",JSONObject().apply {
             put("id",m.id);put("station",m.stationId);put("district",m.districtId);put("reward",m.reward)
             put("baseline",m.baselineSoc);put("source",m.source.name);put("started",m.startedAt)
             put("observed",m.chargingObserved);put("progress",m.progress)
+            put("kind",m.kind.name);put("gain",m.requiredGain)
+            put("windowStart",m.windowStart);put("windowEnd",m.windowEnd);put("windowBaseline",m.windowBaselineSoc)
+            put("lastSample",m.lastSampleAt)
         }) }
         put("history",JSONArray().apply { s.history.forEach { e -> put(JSONObject().apply {
             put("id",e.id);put("mission",e.missionId);put("district",e.districtId)
@@ -38,11 +44,17 @@ internal object GameStateCodec {
         // Invalid storage is surfaced as an error, never silently discarded.
         val j = JSONObject(raw)
         val schema=j.getInt("schema")
-        require(schema in 1..2) { "지원하지 않는 저장 버전" }
+        require(schema in 1..3) { "지원하지 않는 저장 버전" }
         val m=j.optJSONObject("mission")?.let {
             Mission(it.getString("id"),it.getString("station"),it.getString("district"),it.getInt("reward"),
                 it.getDouble("baseline").toFloat(),DataSource.valueOf(it.getString("source")),it.getLong("started"),
-                it.getBoolean("observed"),it.getDouble("progress").toFloat())
+                it.getBoolean("observed"),it.getDouble("progress").toFloat(),
+                requiredGain=if(schema<3)2f else it.getDouble("gain").toFloat(),
+                kind=if(schema<3)MissionKind.ROUTE else MissionKind.valueOf(it.getString("kind")),
+                windowStart=if(it.has("windowStart") && !it.isNull("windowStart"))it.getLong("windowStart") else null,
+                windowEnd=if(it.has("windowEnd") && !it.isNull("windowEnd"))it.getLong("windowEnd") else null,
+                windowBaselineSoc=if(it.has("windowBaseline") && !it.isNull("windowBaseline"))it.getDouble("windowBaseline").toFloat() else null,
+                lastSampleAt=if(schema<3)it.getLong("started") else it.getLong("lastSample"))
         }
         val events=j.getJSONArray("history")
         return GameState(j.optString("district").takeIf { Busan.find(it)!=null },AppMode.valueOf(j.getString("mode")),m,
@@ -51,6 +63,10 @@ internal object GameStateCodec {
                     personalCredit=if(schema==1) true else it.getBoolean("personalCredit"),
                     cityCredit=if(schema==1) true else it.getBoolean("cityCredit"),
                     countsForMission=if(schema==1) true else it.getBoolean("countsForMission"))
-            } })
+            } },homeCharge=if(schema<3)HomeChargePreferences() else j.getJSONObject("home").let {
+                HomeChargePreferences(it.optString("charger").takeIf{value->value.isNotBlank() && value!="null"},
+                    if(it.has("target") && !it.isNull("target"))it.getInt("target") else null,
+                    if(it.has("departure") && !it.isNull("departure"))it.getInt("departure") else null)
+            })
     }
 }

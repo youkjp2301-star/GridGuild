@@ -46,11 +46,14 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var controls by rememberSaveable { mutableStateOf(false) }
     var modeInfo by rememberSaveable { mutableStateOf(false) }
-    var wasAllowed by remember { mutableStateOf(false) }
-    LaunchedEffect(allowed,ready) {
-        if (allowed && !wasAllowed && ready && game.districtId!=null) tab=2
-        if (!allowed) { tab=0;controls=false;modeInfo=false }
-        wasAllowed=allowed
+    var parkingScreenShown by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(allowed,ready,game.districtId,safety.source,safety.parked,safety.uxAllowed) {
+        if(allowed && !parkingScreenShown && ready && game.districtId!=null) { tab=2;parkingScreenShown=true }
+        if(!allowed) {
+            // A lifecycle reconnect is unknown, not a new driving-to-parking arrival.
+            if(safety.source!=DataSource.UNAVAILABLE && (!safety.parked || !safety.uxAllowed)) {tab=0;parkingScreenShown=false}
+            controls=false;modeInfo=false
+        }
     }
     GridTheme {
         BoxWithConstraints(Modifier.fillMaxSize().background(Bg).safeDrawingPadding()) {
@@ -135,7 +138,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
     Text(title,style=MaterialTheme.typography.headlineMedium)
     Spacer(Modifier.height(6.dp));Text(subtitle,color=Subtle,fontSize=14.sp);Spacer(Modifier.height(24.dp))
 }
-@Composable private fun Panel(modifier: Modifier=Modifier,content: @Composable ColumnScope.()->Unit) {
+@Composable internal fun Panel(modifier: Modifier=Modifier,content: @Composable ColumnScope.()->Unit) {
     Surface(modifier,shape=RoundedCornerShape(24.dp),color=Color.White,border=BorderStroke(1.dp,Line),shadowElevation=1.dp) {
         Column(Modifier.padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp),content=content)
     }
@@ -245,6 +248,19 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
     }
 }
 @Composable private fun MissionScreen(g: GameState,reading: VehicleReading,n: NavigationState,now: Long,model: GridViewModel) {
+    var home by rememberSaveable { mutableStateOf(true) }
+    Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+        Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+            FilterChip(selected=home,onClick={home=true},label={Text("HOME CHARGE")},modifier=Modifier.heightIn(min=48.dp).testTag("homeCharge"))
+            FilterChip(selected=!home,onClick={home=false},label={Text("ROUTE CHARGE")},modifier=Modifier.heightIn(min=48.dp).testTag("routeCharge"))
+        }
+        Box(Modifier.weight(1f)) {
+            if(home) HomeChargeScreen(g,reading,now,model)
+            else RouteChargeScreen(g,reading,n,now,model)
+        }
+    }
+}
+@Composable private fun RouteChargeScreen(g: GameState,reading: VehicleReading,n: NavigationState,now: Long,model: GridViewModel) {
     val v=reading.vehicle
     val starting by model.startingMission.collectAsStateWithLifecycle()
     val listState=rememberLazyListState()
@@ -267,15 +283,15 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                 RecommendationStatus.NO_NEARBY -> if(g.mode==AppMode.MOCK)"목적지 반경 5 km 안에 샘플 충전소가 없습니다. 다른 테스트 목적지를 선택해 보세요."
                     else "목적지 반경 5 km 안에 샘플 충전소가 없습니다. 실제 시설의 부재를 뜻하지 않습니다."
             },fontSize=13.sp,color=Subtle,modifier=Modifier.testTag("nearbyReason"))
-            if(n.hasDestination && recommendations.status!=RecommendationStatus.HIGH_SOC) NearbyStationMap(n.lat!!,n.lon!!,recommendations.nearby)
         } }
         g.mission?.let { m -> item { Panel(Modifier.fillMaxWidth().testTag("activeMission")) {
-            Text("미션 진행 중 · ${m.source}",fontWeight=FontWeight.Bold,color=Blue)
-            Text(SampleData.stations.firstOrNull{it.id==m.stationId}?.name ?: m.stationId,fontWeight=FontWeight.SemiBold)
+            Text(if(m.kind==MissionKind.HOME)"우리 집 충전 참여 중 · ${m.source}" else "미션 진행 중 · ${m.source}",fontWeight=FontWeight.Bold,color=Blue)
+            Text(if(m.kind==MissionKind.HOME)g.homeCharge.chargerName ?: "우리 집 충전" else SampleData.stations.firstOrNull{it.id==m.stationId}?.name ?: "충전 미션",fontWeight=FontWeight.SemiBold)
             Text("목적지를 변경해도 이미 시작한 미션은 유지됩니다.",fontSize=13.sp,color=Subtle)
-            Text("시작 SOC ${m.baselineSoc.toInt()}% → 목표 ${(m.baselineSoc+m.requiredGain).toInt()}% · 충전 ON + SOC 2%p 증가")
+            val baseline=if(m.kind==MissionKind.HOME)m.windowBaselineSoc else m.baselineSoc
+            Text(if(baseline==null)"미션 시간 시작 후 배터리를 자동 확인합니다." else "시작 SOC ${baseline.toInt()}% → 완료 조건 ${(baseline+m.requiredGain).toInt()}% · 충전 ON + SOC 2%p 증가")
             LinearProgressIndicator(progress={m.progress},modifier=Modifier.fillMaxWidth(),trackColor=Pale)
-            Text("${(m.progress*100).toInt()}% · 권장 시간 내 조건 충족 시 자동 완료 · 위치 미인증 데모 XP",fontSize=14.sp,color=Subtle)
+            Text("${(m.progress*100).toInt()}% · 미션 참여 시간 내 조건 충족 시 자동 완료 · 장소 미인증 데모 XP",fontSize=14.sp,color=Subtle)
             TextButton(onClick=model::cancelMission){Text("미션 취소")}
         } } }
         items(stations,key={it.id}) { station ->
@@ -288,7 +304,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                 g.mission!=null -> "다른 미션 진행 중"
                 starting==station.id -> "미션 시작 중…"
                 starting!=null -> "시작 요청 처리 중"
-                !station.inWindow(now) -> "권장 시간 외"
+                !station.inWindow(now) -> "미션 참여 시간 아님"
                 !reading.fresh || !correctSource -> "차량 정보 확인 필요"
                 else -> "미션 시작"
             }
@@ -297,7 +313,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                     Surface(color=SoftGreen,shape=RoundedCornerShape(14.dp)){Icon(Icons.Outlined.EvStation,null,tint=Green,modifier=Modifier.padding(12.dp).size(26.dp))};Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
                         Text("${stations.indexOf(station)+1}. ${station.name}",fontSize=20.sp,fontWeight=FontWeight.Bold)
-                        Text("${Busan.find(station.districtId)?.name} · ${station.windowLabel}",color=Subtle)
+                        Text("${Busan.find(station.districtId)?.name} · "+if(station.hourStart==0 && station.hourEnd==24)"미션 상시 참여" else "미션 ${station.windowLabel}",color=Subtle)
                         Text("목적지에서 직선 %.1f km".format(java.util.Locale.KOREA,recommendations.nearby.first{it.station.id==station.id}.distanceKm),fontSize=13.sp,color=Green)
                     }
                     BadgeText("+${station.xp} 데모 XP",Gold)
@@ -316,12 +332,15 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                     g.mission?.stationId==station.id -> "위의 진행 카드에서 목표 SOC와 자동 완료 조건을 확인하세요."
                     g.mission!=null -> "진행 중인 미션을 완료하거나 취소한 후 시작할 수 있어요."
                     !reading.fresh || !correctSource -> "차량 정보를 기다리고 있어요. 데모에서는 상단 조작 메뉴를 사용할 수 있어요."
-                    !station.inWindow(now) -> "${station.windowLabel}에 시작할 수 있어요."
+                    !station.inWindow(now) -> "보상 미션은 ${station.windowLabel}에 참여할 수 있어요. 충전소가 닫혔다는 뜻은 아닙니다."
                     else -> "충전 ON 상태에서 SOC가 2%p 증가하면 자동으로 완료됩니다."
                 },fontSize=13.sp,color=Subtle,modifier=Modifier.heightIn(min=24.dp))
             }
         }
-        item { Text("SOC만으로 실제 충전 장소나 전력망 기여를 인증하지 않습니다. 하루에 샘플 충전소 3곳을 모두 완료하면 데모 50 XP 추가.",fontSize=14.sp,color=Subtle) }
+        if(n.hasDestination && recommendations.status!=RecommendationStatus.HIGH_SOC) item {
+            Panel(Modifier.fillMaxWidth()) { NearbyStationMap(n.lat!!,n.lon!!,recommendations.nearby) }
+        }
+        item { Text("실제 운영시간은 미연동입니다. 기본 미션(삼락 강변·센텀 녹색·광안 해변) 3개를 하루에 완료하면 데모 50 XP 추가.",fontSize=14.sp,color=Subtle) }
         items(g.completionHistory.takeLast(5).reversed()) { e ->
             Text("개인 +${if(e.personalCredit)e.xp else 0} · 도시 +${if(e.cityCredit)e.xp else 0} XP · ${GameState.day(e.at)} · ${if(e.kind=="DAILY") "일일 보너스" else "데모 충전 성과"}",color=Green)
         }

@@ -27,6 +27,7 @@ class GridGuildFlowTest {
     @Test fun missionWaypointRewardAndSafety() {
         setup()
         compose.onNodeWithTag("tab1").performClick()
+        compose.onNodeWithTag("routeCharge").performClick()
         compose.onNodeWithTag("missionList").performScrollToNode(hasTestTag("waypoint-sasang-river"))
         compose.onNodeWithTag("waypoint-sasang-river").performClick()
         compose.onNodeWithTag("mission-sasang-river").performClick()

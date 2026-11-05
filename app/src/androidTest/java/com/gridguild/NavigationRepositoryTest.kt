@@ -96,13 +96,13 @@ class NavigationRepositoryTest {
         try {
             val west=DemoDestinations.places.first()
             main{repo.connect();client.listener.onDestinationInfo(destination(west.lat,west.lon))};repo.finished()
-            assertEquals(listOf("sasang-river"),ChargingRecommendations.around(repo.state.value.lat,repo.state.value.lon,42f).nearby.map{it.station.id})
+            assertEquals(listOf("sasang-river","sasang-park"),ChargingRecommendations.around(repo.state.value.lat,repo.state.value.lon,42f).nearby.map{it.station.id})
             val reads=client.reads
             main{client.listener.onDestinationChanged()}
             assertTrue(repo.state.value.pending);assertEquals(reads+1,client.reads)
             val east=DemoDestinations.places[1]
             main{client.listener.onDestinationInfo(destination(east.lat,east.lon))};repo.finished()
-            assertEquals(listOf("centum","gwangalli"),ChargingRecommendations.around(repo.state.value.lat,repo.state.value.lon,42f).nearby.map{it.station.id})
+            assertEquals(listOf("centum","centum-campus","gwangalli","gwangalli-marina"),ChargingRecommendations.around(repo.state.value.lat,repo.state.value.lon,42f).nearby.map{it.station.id})
         } finally { main{repo.close()};scope.cancel() }
     }
 }

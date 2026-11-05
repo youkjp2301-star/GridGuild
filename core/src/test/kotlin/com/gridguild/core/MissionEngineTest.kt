@@ -33,7 +33,7 @@ class MissionEngineTest {
     }
     @Test fun dailyBonusIsPaidOnce() {
         var s=initial
-        SampleData.stations.forEachIndexed { i,station ->
+        SampleData.dailyBonusStations.forEachIndexed { i,station ->
             val t=time+i*3000
             s=MissionEngine.start(s,station,sample(at=t),t,"${station.id}:$i")
             s=MissionEngine.observe(s,sample(44f,at=t+1000),t+1000)

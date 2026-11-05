@@ -114,6 +114,26 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
             if(!mutate { MissionEngine.start(it,station,vehicle.value,System.currentTimeMillis(),"${station.id}:${UUID.randomUUID()}") }) startingMission.value=null
         }
     }
+    fun registerHomeCharger(name: String) = action {
+        val label=name.trim()
+        if(label.isEmpty() || label.length>40){message.value="충전소 이름은 1~40자로 입력하세요";return@action}
+        mutate{it.copy(homeCharge=it.homeCharge.copy(chargerName=label))}
+    }
+    fun saveHomePreferences(targetSoc: Int?,departureMinutes: Int?) = action {
+        mutate { it.copy(homeCharge=it.homeCharge.copy(targetSoc=targetSoc,departureMinutes=departureMinutes)) }
+    }
+    fun startHomeCharge() {
+        if(!(platformAllowed.value && safety.value.allowsGame(System.currentTimeMillis()))) {
+            message.value="안전한 주차 상태에서 참여하세요";return
+        }
+        if(!startingMission.compareAndSet(null,HomeChargeEngine.stationId))return
+        viewModelScope.launch {
+            if(!mutate { state ->
+                require(platformAllowed.value && safety.value.allowsGame(System.currentTimeMillis())){"주차 상태를 다시 확인하세요"}
+                HomeChargeEngine.start(state,vehicle.value,System.currentTimeMillis(),"home-charge:${UUID.randomUUID()}")
+            })startingMission.value=null
+        }
+    }
     fun cancelMission() = action { mutate { it.copy(mission=null) } }
     private fun navigationAction(request: (NavigationRepository)->Unit) = action {
         val repository=navRepo
