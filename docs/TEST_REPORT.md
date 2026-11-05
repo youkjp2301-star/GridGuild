@@ -8,8 +8,8 @@
 | 공식 Pleos 이미지 | v2.1.0 API 34 x86_64, SHA1 `b4f858d5bcc6c71506d7edfc872bcb9e5a11acaa` 공식 목록과 일치 |
 | APK 빌드 | `:app:assembleDebug` 성공 |
 | Lint | `:app:lintDebug` 성공. 버전 업데이트 권고 등 경고는 남음 |
-| 단위 테스트 | 최신 0.3.0: `:core:test` **33개**, 실패/오류 0 |
-| 화면 테스트 | 최신 0.3.0: **7개 통과**. 도시 잠금·과거 도시 방문·XP 보존·초기화 시 재잠금, 배터리/미션 안정성, Mock 안내, 보상·P/D 차단·재생성 |
+| 단위 테스트 | 최신 0.4.0: `:core:test` **41개**, 실패/오류 0 |
+| 에뮬레이터 테스트 | 최신 0.4.0: **14개 통과** (화면 11 + 저장 코덱 3). 항목별 초기화·재적립·취소·재실행, 도시 잠금, 배터리/미션 안정성, Mock 안내, 보상·P/D 차단 |
 | Git 추적 파일 구성 | 로컬 설정·SDK 폴더를 제외한 Git index export에서 assembleDebug + core:test + lintDebug 모두 성공 |
 | 실제 로컬 Clone | 첫 커밋 4a5fd0e를 `git clone --no-local`로 복제. JAVA_HOME/ANDROID_HOME만 지정해 APK + 24개 단위 테스트 + Lint 성공 (36초) |
 | 최종 코드 Clone | 코드 커밋 cfd0141로 fast-forward 후 같은 검사 재통과 (41초). local.properties 미포함 확인 |
@@ -73,3 +73,15 @@
 - `artifacts/premium/`의 실제 도시·잠금 안내·잠긴 컬렉션·과거 도시·홈 보상·미션 캡처를 시각 검토했다. 산출물은 Git 제외다.
 - 사용자 진행 기록을 앱 내부 백업에서 복원하고 SHA256 일치를 확인했다. 설치 버전 0.3.0 / versionCode 3, 기존 기록으로 앱 재실행 성공.
 - SDK 호출과 주행 제한 정책 변경 없음. 이번 작업은 표준 Android Mock 화면 검증이며 실제 Pleos 런타임을 재실행한 결과가 아니다. Vehicle 기존 성공 / Navi 목적지 콜백 미수신 상태는 유지된다.
+
+## 2026-11-05 · 0.4.0 항목별 테스트 초기화
+
+- `:app:assembleDebug :app:assembleDebugAndroidTest :core:test :app:lintDebug` 성공 (48초). Lint 오류 0 / 기존 경고 9개. SDK 기어 API의 기존 deprecation 경고도 유지된다.
+- 순수 Kotlin 테스트 **41개 통과**. 새 8개에서 선택 지역의 도시 XP/개인 XP/미션 상태 분리, 월간 랭킹, 반복 초기화, 기존 ID 재사용 금지, 미션 재도전·일일 보너스 재적립, SDK 모드 변경 불가를 확인했다.
+- 표준 API 34 에뮬레이터에서 `DemoResetFlowTest,GameStateCodecTest,GridGuildFlowTest,UiRegressionTest` 실행: **OK (14 tests)**, 32.13초.
+- 도시 초기화 후 Lv.1 및 미래 아트 재잠금, 개인 포인트/다른 지역/진행 미션 보존을 확인했다. 개인 포인트 초기화는 도시 레벨과 완료 제한을 보존하며 재생성 후에도 유지된다.
+- 미션 초기화 후 진행/완료 상태만 사라지고 기존 XP가 유지된다. 같은 날 같은 충전소 재시작→충전 ON·SOC +2%→개인 470→590 XP / 도시 370→490 XP를 확인했다.
+- 4개 확인창의 취소 시 무변경, 전체 초기화 후 지역 선택 화면 복귀, 기존 P/D 제한·미션·도시/Mock 안정성 회귀를 확인했다.
+- 저장 코덱 3개 테스트로 schema 1의 기존 120 XP 유지, schema 2의 false 플래그/진행 미션 왕복 저장, 누락 필드·지원하지 않는 버전·손상 JSON의 명시적 실패를 확인했다.
+- 초기화 버튼/도시 초기화 확인창을 실제 PNG로 시각 검토했다. 테스트 후 사용자 백업/복원 파일 SHA256 일치 확인, 0.4.0 설치 및 기존 Lv.3·도시/개인 각 360 XP 표시 확인. Mock 테스트 패널을 열어 둔 상태다.
+- 캡처와 로그는 `artifacts/reset-controls/`, `.tools/reset-*`에 보관하며 Git 제외다. 실제 Pleos 런타임 검증을 추가한 작업은 아니다.

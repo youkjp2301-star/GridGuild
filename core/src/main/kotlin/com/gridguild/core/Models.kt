@@ -98,6 +98,10 @@ data class PointEvent(
     val id: String, val missionId: String, val districtId: String,
     val xp: Int, val at: Long, val kind: String = "MISSION",
     val demo: Boolean = true,
+    // Keep the original award while allowing independent Mock-only test resets.
+    val personalCredit: Boolean = true,
+    val cityCredit: Boolean = true,
+    val countsForMission: Boolean = true,
 )
 data class GameState(
     val districtId: String? = null,
@@ -105,11 +109,15 @@ data class GameState(
     val mission: Mission? = null,
     val history: List<PointEvent> = emptyList(),
 ) {
-    val xp get() = history.sumOf { it.xp }
-    fun cityXp(id: String?) = history.filter { it.districtId == id }.sumOf { it.xp }
+    val xp get() = history.filter { it.personalCredit }.sumOf { it.xp }
+    fun cityXp(id: String?) = history.filter { it.cityCredit && it.districtId == id }.sumOf { it.xp }
     fun seasonXp(now: Long, district: String? = null) = history.filter {
-        season(it.at) == season(now) && (district == null || it.districtId == district)
+        season(it.at) == season(now) && (if(district == null) it.personalCredit else it.cityCredit && it.districtId == district)
     }.sumOf { it.xp }
+    val completionHistory get() = history.filter { it.countsForMission }
+    fun completedToday(stationId: String,now: Long) = completionHistory.any {
+        it.kind == "MISSION" && it.missionId.startsWith("$stationId:") && day(it.at) == day(now)
+    }
     companion object {
         fun season(at: Long): String = DateTimeFormatter.ofPattern("yyyy-MM")
             .format(Instant.ofEpochMilli(at).atZone(ZoneId.of("Asia/Seoul")))

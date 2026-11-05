@@ -123,9 +123,28 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
     fun mockCharge(on: Boolean) { (vehicleRepo as? MockVehicleRepository)?.set(charge=if(on) ChargeSignal.ON else ChargeSignal.OFF) }
     fun mockPark(parked: Boolean) { (vehicleRepo as? MockVehicleRepository)?.park(parked) }
     fun mockUx(allowed: Boolean) { (vehicleRepo as? MockVehicleRepository)?.let { it.park(it.safety.value.parked,allowed) } }
-    fun reset() = action {
-        if (game.value.mode==AppMode.MOCK) {
-            mutate { GameState() };(vehicleRepo as? MockVehicleRepository)?.set(42f,ChargeSignal.OFF)
+    fun resetDemo(target: DemoResetTarget,expectedDistrictId: String?) = action {
+        var authorized=false
+        val saved=mutate { state ->
+            // Recheck against the persisted mode inside the same atomic update as the reset.
+            if(state.mode==AppMode.MOCK && platformAllowed.value && safety.value.allowsGame(System.currentTimeMillis()) &&
+                (target!=DemoResetTarget.CITY_LEVEL || state.districtId==expectedDistrictId)) {
+                authorized=true
+                DemoResets.reset(state,target)
+            } else state
+        }
+        if(saved && authorized) {
+            reward.value=0
+            if(target==DemoResetTarget.CHARGING_MISSIONS || target==DemoResetTarget.ALL) startingMission.value=null
+            if(target==DemoResetTarget.ALL) (vehicleRepo as? MockVehicleRepository)?.set(42f,ChargeSignal.OFF)
+            message.value=when(target) {
+                DemoResetTarget.CITY_LEVEL -> "선택 지역의 도시를 Lv.1 · 0 XP로 초기화했습니다."
+                DemoResetTarget.CHARGING_MISSIONS -> "충전 미션을 초기화했습니다. 같은 충전소에 다시 도전할 수 있어요."
+                DemoResetTarget.PERSONAL_POINTS -> "내 포인트를 0 XP로 초기화했습니다."
+                DemoResetTarget.ALL -> "전체 데모 데이터를 초기화했습니다."
+            }
+        } else if(saved) {
+            message.value="모드·선택 지역·주차 상태가 변경되었습니다. 초기화 항목을 다시 확인하세요."
         }
     }
     override fun onCleared() {

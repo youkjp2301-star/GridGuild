@@ -188,9 +188,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                 OutlinedButton(onClick={model.mockPark(!s.parked)},modifier=Modifier.testTag("park")) { Text(if(s.parked) "D단 시뮬레이션" else "P단 시뮬레이션") }
                 OutlinedButton(onClick={model.mockUx(!s.uxAllowed)},modifier=Modifier.testTag("ux")) { Text(if(s.uxAllowed) "UX 제한" else "UX 허용") }
             }
-            var confirmReset by remember { mutableStateOf(false) }
-            if(allowed) TextButton(onClick={confirmReset=true}){Text("데모 데이터 초기화")}
-            if(confirmReset && allowed) AlertDialog(onDismissRequest={confirmReset=false},title={Text("데모 기록을 초기화할까요?")},text={Text("지역 선택, 모든 데모 XP와 미션 기록을 지웁니다.")},confirmButton={TextButton(onClick={model.reset();confirmReset=false}){Text("초기화")}},dismissButton={TextButton(onClick={confirmReset=false}){Text("취소")}})
+            if(allowed) DemoResetControls(game,model::resetDemo)
         }
     }
     requestedMode?.let { target ->
@@ -273,7 +271,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
         } } }
         if(stations.isEmpty()) item { Text("SOC 90% 이상으로 추가 충전을 권장하지 않습니다.") }
         items(stations,key={it.id}) { station ->
-            val done=g.history.any { it.missionId.startsWith("${station.id}:") && GameState.day(it.at)==GameState.day(now) }
+            val done=g.completedToday(station.id,now)
             val correctSource=v.source==if(g.mode==AppMode.MOCK)DataSource.MOCK else DataSource.PLEOS
             val canStart=g.mission==null && starting==null && reading.fresh && correctSource && station.inWindow(now) && !done
             val buttonLabel=when {
@@ -312,7 +310,9 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
             }
         }
         item { Text("SOC만으로 실제 충전 장소나 전력망 기여를 인증하지 않습니다. 하루에 샘플 충전소 3곳을 모두 완료하면 데모 50 XP 추가.",fontSize=14.sp,color=Subtle) }
-        items(g.history.takeLast(5).reversed()) { e -> Text("+${e.xp} XP · ${GameState.day(e.at)} · ${if(e.kind=="DAILY") "일일 보너스" else "데모 충전 성과"}",color=Green) }
+        items(g.completionHistory.takeLast(5).reversed()) { e ->
+            Text("개인 +${if(e.personalCredit)e.xp else 0} · 도시 +${if(e.cityCredit)e.xp else 0} XP · ${GameState.day(e.at)} · ${if(e.kind=="DAILY") "일일 보너스" else "데모 충전 성과"}",color=Green)
+        }
     }
 }
 @Composable private fun CityScreen(g: GameState) {

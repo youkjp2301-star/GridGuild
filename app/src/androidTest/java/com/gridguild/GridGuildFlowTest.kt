@@ -41,6 +41,7 @@ class GridGuildFlowTest {
         compose.onNodeWithTag("park").performClick()
         compose.onNodeWithTag("restricted").assertExists()
         compose.onNodeWithTag("tab2").assertDoesNotExist()
+        compose.onNodeWithTag("demoResetControls").assertDoesNotExist()
         compose.onNodeWithText("MOCK · P단으로 전환").performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithTag("tab2").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("tab0").performClick()

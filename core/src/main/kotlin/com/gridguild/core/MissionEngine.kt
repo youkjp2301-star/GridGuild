@@ -10,7 +10,7 @@ object MissionEngine {
         require(vehicle.soc!! <= 98f) { "SOC가 너무 높아 +2% 미션을 시작할 수 없습니다" }
         require(station.inWindow(now)) { "권장 시간대에 시작하세요" }
         require(state.history.none { it.id == id }) { "이미 사용한 미션 ID" }
-        require(state.history.none { it.missionId.startsWith("${station.id}:") && GameState.day(it.at) == GameState.day(now) }) { "오늘 이미 완료한 미션입니다" }
+        require(!state.completedToday(station.id,now)) { "오늘 이미 완료한 미션입니다" }
         return state.copy(mission = Mission(id, station.id, state.districtId, station.xp,
             vehicle.soc, vehicle.source, now))
     }
@@ -30,12 +30,14 @@ object MissionEngine {
         if (state.history.any { it.missionId == m.id }) return state.copy(mission = null)
         val event = PointEvent(m.id, m.id, m.districtId, m.reward, now)
         val history = state.history + event
-        val daily = history.filter { it.kind == "MISSION" && GameState.day(it.at) == GameState.day(now) }
-        val bonusId = "daily:${GameState.day(now)}"
+        val daily = history.filter { it.countsForMission && it.kind == "MISSION" && GameState.day(it.at) == GameState.day(now) }
+        val bonusId = "daily:${GameState.day(now)}:${m.id}"
         val eligible = SampleData.stations.map { it.id }.toSet()
         // Fixture missions have station IDs embedded in unique mission IDs by the app.
         val done = daily.map { it.missionId.substringBefore(':') }.toSet()
-        val bonus = if (done.containsAll(eligible) && eligible.isNotEmpty() && history.none { it.id == bonusId })
+        val bonus = if (done.containsAll(eligible) && eligible.isNotEmpty() && history.none {
+            it.countsForMission && it.kind == "DAILY" && GameState.day(it.at) == GameState.day(now)
+        })
             listOf(PointEvent(bonusId, bonusId, m.districtId, 50, now, "DAILY")) else emptyList()
         return state.copy(mission = null, history = history + bonus)
     }
