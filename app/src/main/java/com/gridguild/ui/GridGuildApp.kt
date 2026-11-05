@@ -3,8 +3,6 @@
 package com.gridguild.ui
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,12 +27,6 @@ import com.gridguild.GridViewModel
 import com.gridguild.core.*
 import com.gridguild.data.NavigationState
 
-private val Blue=Color(0xFF4D91C9)
-private val Ink=Color(0xFF182C40)
-private val Subtle=Color(0xFF526779)
-private val Pale=Color(0xFFDCEFFD)
-private val Bg=Color(0xFFF7FAFD)
-private val Green=Color(0xFF26866E)
 private val tabs=listOf("홈","충전 미션","가상 도시","랭킹")
 private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.Outlined.LocationCity,Icons.Outlined.Leaderboard)
 
@@ -60,19 +52,26 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
         if (!allowed) { tab=0;controls=false;modeInfo=false }
         wasAllowed=allowed
     }
-    MaterialTheme(colorScheme=lightColorScheme(primary=Blue,onPrimary=Color.White,background=Bg,
-        surface=Color.White,onSurface=Ink,secondary=Green,onBackground=Ink)) {
+    GridTheme {
         BoxWithConstraints(Modifier.fillMaxSize().background(Bg).safeDrawingPadding()) {
             val wide=maxWidth>=840.dp
             val compact=maxWidth<600.dp
             Column(Modifier.fillMaxSize()) {
-                Row(Modifier.fillMaxWidth().padding(horizontal=if(compact)16.dp else 24.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically) {
-                    if(!compact) Icon(Icons.Outlined.Bolt,"",tint=Blue,modifier=Modifier.size(32.dp))
-                    Text("GRIDGUILD",fontSize=if(compact)18.sp else 23.sp,fontWeight=FontWeight.ExtraBold,letterSpacing=if(compact)1.sp else 2.sp)
+                Row(Modifier.fillMaxWidth().background(Color.White).padding(horizontal=if(compact)16.dp else 26.dp,vertical=14.dp),verticalAlignment=Alignment.CenterVertically) {
+                    if(!compact) {
+                        Surface(color=Ink,shape=RoundedCornerShape(12.dp)) { Icon(Icons.Outlined.Bolt,null,tint=Color.White,modifier=Modifier.padding(8.dp).size(24.dp)) }
+                        Spacer(Modifier.width(12.dp))
+                    }
+                    Column(verticalArrangement=Arrangement.spacedBy(2.dp)) {
+                        Text("GRIDGUILD",fontSize=if(compact)18.sp else 21.sp,fontWeight=FontWeight.Bold,letterSpacing=1.1.sp)
+                        if(!compact)Text("충전으로 함께 자라는 도시",fontSize=11.sp,color=Subtle)
+                    }
                     Spacer(Modifier.weight(1f))
                     AssistChip(onClick={modeInfo=true},enabled=platformAllowed,
                         label={Text(if(game.mode==AppMode.MOCK) "데모 (Mock)" else "Pleos SDK")},
                         leadingIcon={Icon(Icons.Outlined.Info,null,Modifier.size(18.dp))},
+                        shape=RoundedCornerShape(12.dp),border=BorderStroke(1.dp,Line),
+                        colors=AssistChipDefaults.assistChipColors(containerColor=Bg,labelColor=Blue,leadingIconContentColor=Blue),
                         modifier=Modifier.heightIn(min=48.dp).testTag("modeInfo"))
                     Spacer(Modifier.width(16.dp))
                     if(platformAllowed) {
@@ -80,19 +79,19 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                         else TextButton(onClick={controls=!controls},modifier=Modifier.testTag("settings")) { Icon(Icons.Outlined.Tune,null);Spacer(Modifier.width(6.dp));Text("연결 · 테스트") }
                     }
                 }
-                HorizontalDivider(color=Pale)
+                HorizontalDivider(color=Line)
                 if (controls && platformAllowed) ConnectionPanel(model,game,vehicle,safety,allowed)
                 if (!ready) Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { Text(message.ifBlank { "로컬 진행 상황 불러오는 중…" }) }
                 else if(!platformAllowed) Box(Modifier.fillMaxSize().padding(32.dp),contentAlignment=Alignment.Center) { Text("플랫폼 주차 UX 확인 대기 · 주행 중에는 게임을 이용할 수 없습니다.") }
                 else if(game.districtId==null) Onboarding(model)
                 else if(!allowed) RestrictedScreen(safety,vehicle,game,model)
                 else Row(Modifier.weight(1f)) {
-                    if(wide) NavigationRail(containerColor=Bg) {
+                    if(wide) NavigationRail(containerColor=Color.White,modifier=Modifier.fillMaxHeight().width(104.dp)) {
                         Spacer(Modifier.height(24.dp))
-                        tabs.forEachIndexed { i,label -> NavigationRailItem(selected=tab==i,onClick={tab=i},icon={Icon(tabIcons[i],label)},label={Text(label)},modifier=Modifier.padding(vertical=8.dp).testTag("tab$i")) }
+                        tabs.forEachIndexed { i,label -> NavigationRailItem(selected=tab==i,onClick={tab=i},icon={Icon(tabIcons[i],label)},label={Text(label)},colors=NavigationRailItemDefaults.colors(selectedIconColor=Green,selectedTextColor=Ink,indicatorColor=SoftGreen,unselectedIconColor=Subtle,unselectedTextColor=Subtle),modifier=Modifier.padding(vertical=8.dp).testTag("tab$i")) }
                     }
                     Column(Modifier.weight(1f)) {
-                        if(!wide) NavigationBar(containerColor=Bg) { tabs.forEachIndexed { i,label -> NavigationBarItem(selected=tab==i,onClick={tab=i},icon={Icon(tabIcons[i],label)},label={Text(label)},modifier=Modifier.testTag("tab$i")) } }
+                        if(!wide) NavigationBar(containerColor=Color.White,tonalElevation=0.dp) { tabs.forEachIndexed { i,label -> NavigationBarItem(selected=tab==i,onClick={tab=i},icon={Icon(tabIcons[i],label)},label={Text(label)},colors=NavigationBarItemDefaults.colors(selectedIconColor=Green,selectedTextColor=Ink,indicatorColor=SoftGreen,unselectedIconColor=Subtle,unselectedTextColor=Subtle),modifier=Modifier.testTag("tab$i")) } }
                         Box(Modifier.weight(1f).padding(if(wide)24.dp else 16.dp)) {
                             when(tab) {
                                 0 -> HomeScreen(game,reading,navi,now) { tab=1 }
@@ -107,7 +106,11 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                     Text(message,Modifier.weight(1f),fontSize=14.sp)
                     TextButton(onClick={model.message.value=""}){Text("닫기")}
                 }
-                Text("MVP · 충전소 / 전력망 / 경쟁자는 MOCK · 모든 XP는 위치 미인증 데모 성과",fontSize=12.sp,color=Subtle,modifier=Modifier.padding(horizontal=24.dp,vertical=8.dp))
+                HorizontalDivider(color=Line)
+                Row(Modifier.fillMaxWidth().background(Color.White).padding(horizontal=24.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Outlined.Info,null,tint=Subtle,modifier=Modifier.size(14.dp))
+                    Text(if(game.mode==AppMode.MOCK)"데모 데이터 · 충전소·전력망·경쟁자는 샘플이며 XP는 위치 미인증 성과입니다." else "차량: Pleos SDK · 충전소·전력망·경쟁자: 데모 · XP는 위치 미인증 성과입니다.",fontSize=12.sp,color=Subtle)
+                }
             }
             AnimatedVisibility(reward>0 && allowed,modifier=Modifier.align(Alignment.TopCenter).padding(top=75.dp)) {
                 Surface(color=Green,shape=RoundedCornerShape(20.dp),shadowElevation=12.dp) {
@@ -126,21 +129,23 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
 }
 
 @Composable private fun BadgeText(text: String,color: Color=Blue) {
-    Surface(color=color.copy(alpha=.10f),shape=RoundedCornerShape(9.dp)) { Text(text,Modifier.padding(horizontal=10.dp,vertical=5.dp),color=color,fontSize=13.sp,fontWeight=FontWeight.Bold) }
+    Surface(color=color.copy(alpha=.09f),shape=RoundedCornerShape(8.dp)) { Text(text,Modifier.padding(horizontal=11.dp,vertical=7.dp),color=if(color==Gold)Color(0xFF80602E) else color,fontSize=12.sp,fontWeight=FontWeight.SemiBold) }
 }
 @Composable private fun Section(title: String,subtitle: String) {
-    Text(title,fontSize=27.sp,fontWeight=FontWeight.Bold)
-    Spacer(Modifier.height(5.dp));Text(subtitle,color=Subtle,fontSize=15.sp);Spacer(Modifier.height(22.dp))
+    Text(title,style=MaterialTheme.typography.headlineMedium)
+    Spacer(Modifier.height(6.dp));Text(subtitle,color=Subtle,fontSize=14.sp);Spacer(Modifier.height(24.dp))
 }
 @Composable private fun Panel(modifier: Modifier=Modifier,content: @Composable ColumnScope.()->Unit) {
-    Surface(modifier,shape=RoundedCornerShape(20.dp),color=Color.White,border=BorderStroke(1.dp,Color(0xFFE4EDF4))) {
-        Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(10.dp),content=content)
+    Surface(modifier,shape=RoundedCornerShape(24.dp),color=Color.White,border=BorderStroke(1.dp,Line),shadowElevation=1.dp) {
+        Column(Modifier.padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp),content=content)
     }
 }
 @Composable private fun Metric(label: String,value: String,icon: ImageVector) {
     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-        Icon(icon,null,tint=Blue,modifier=Modifier.size(28.dp))
-        Column { Text(label,color=Subtle,fontSize=14.sp);Text(value,fontWeight=FontWeight.Bold,fontSize=27.sp) }
+        Surface(color=if(icon==Icons.Outlined.Bolt)Gold.copy(alpha=.12f) else Pale,shape=RoundedCornerShape(14.dp)) {
+            Icon(icon,null,tint=if(icon==Icons.Outlined.Bolt)Gold else Blue,modifier=Modifier.padding(11.dp).size(25.dp))
+        }
+        Column(verticalArrangement=Arrangement.spacedBy(3.dp)) { Text(label,color=Subtle,fontSize=13.sp);Text(value,fontWeight=FontWeight.Bold,fontSize=30.sp,letterSpacing=(-.5).sp) }
     }
 }
 @Composable private fun Onboarding(model: GridViewModel) {
@@ -210,27 +215,28 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
     val v=reading.vehicle
     val d=Busan.find(g.districtId)!!;val xp=g.cityXp(d.id);val level=CityLevels.level(xp)
     Column(Modifier.verticalScroll(rememberScrollState())) {
-        Section("${d.name}, 함께 만드는 미래","좋은 충전 습관이 도시의 새로운 풍경이 됩니다.")
+        Section("${d.name}, 함께 만드는 미래","오늘의 좋은 충전이 우리 도시의 다음 풍경을 열어요.")
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val city: @Composable ()->Unit = {
             Panel(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment=Alignment.CenterVertically) { BadgeText("Lv.$level · ${CityLevels.names[level-1]}");Spacer(Modifier.weight(1f));Text(d.name,fontWeight=FontWeight.Bold) }
-                CityCanvas(level,d.id,Modifier.fillMaxWidth().aspectRatio(2f))
+                CityCanvas(level,d.id,level,Modifier.fillMaxWidth().aspectRatio(2f))
                 Text("지역 성장 · $xp XP",fontWeight=FontWeight.Bold)
-                LinearProgressIndicator(progress={CityLevels.progress(xp)},modifier=Modifier.fillMaxWidth(),color=Blue,trackColor=Pale)
+                LinearProgressIndicator(progress={CityLevels.progress(xp)},modifier=Modifier.fillMaxWidth().height(6.dp),color=Gold,trackColor=Bg)
                 Text(if(level==12) "최고 레벨 달성" else "다음 레벨까지 ${CityLevels.thresholds[level]-xp} XP",color=Subtle,fontSize=14.sp)
             } }
             val metrics: @Composable ()->Unit = {
             Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                 Panel(Modifier.fillMaxWidth()) {
                     Metric("EV 배터리 · ${v.source}","${v.soc?.toInt() ?: "—"}%",Icons.Outlined.BatteryChargingFull)
-                    Text("충전 스위치 ${v.chargeSwitch} · ${reading.statusLabel}",fontSize=14.sp,color=Subtle,modifier=Modifier.testTag("batteryStatus"))
-                    Text("스위치 ON은 전력량·장소 인증이 아닙니다.",fontSize=12.sp,color=Subtle)
+                    LinearProgressIndicator(progress={(v.soc ?: 0f)/100f},modifier=Modifier.fillMaxWidth().height(5.dp),color=Green,trackColor=Bg)
+                    Text("충전 스위치 ${v.chargeSwitch} · ${reading.statusLabel}",fontSize=13.sp,color=if(reading.fresh)Green else Subtle,modifier=Modifier.testTag("batteryStatus"))
+                    Text("충전 스위치 ON은 전력량·장소 인증이 아닙니다.",fontSize=12.sp,color=Subtle)
                 }
                 Panel(Modifier.fillMaxWidth()) {
                     Metric("내 누적 데모 성과","${g.xp} XP",Icons.Outlined.Bolt)
                     Text("이번 시즌 ${g.seasonXp(now)} XP",color=Subtle)
-                    Button(onClick=onMission,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)) { Text("충전 미션 찾기") }
+                    Button(onClick=onMission,shape=RoundedCornerShape(14.dp),modifier=Modifier.fillMaxWidth().heightIn(min=54.dp)) { Icon(Icons.Outlined.EvStation,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text("충전 미션 찾기") }
                 }
             } }
             if(maxWidth<620.dp) Column(verticalArrangement=Arrangement.spacedBy(18.dp)) { city();metrics() }
@@ -247,7 +253,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
     LaunchedEffect(g.mission?.id) { if(g.mission!=null) listState.animateScrollToItem(0) }
     val stations=SampleData.recommend(n.lat,n.lon,v.soc)
     LazyColumn(state=listState,modifier=Modifier.testTag("missionList"),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-        item { Section("충전이 도시의 에너지가 되도록","목적지 주변 후보 · MOCK 충전소 / 모의 전력망 · 실제 경로 형상 미사용") }
+        item { Section("충전 미션","내 이동에 맞는 충전으로, 도시의 다음 단계를 준비해요.") }
         item { Panel(Modifier.fillMaxWidth()) {
             Text("SOC ${v.soc?.toInt() ?: "—"}% · 충전 스위치 ${v.chargeSwitch}",fontWeight=FontWeight.Bold,fontSize=20.sp)
             Text(reading.statusLabel,fontSize=14.sp,color=if(reading.fresh)Green else Subtle,modifier=Modifier.testTag("missionBatteryStatus"))
@@ -282,13 +288,13 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
             }
             Panel(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment=Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.EvStation,null,tint=Green,modifier=Modifier.size(34.dp));Spacer(Modifier.width(14.dp))
+                    Surface(color=SoftGreen,shape=RoundedCornerShape(14.dp)){Icon(Icons.Outlined.EvStation,null,tint=Green,modifier=Modifier.padding(12.dp).size(26.dp))};Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) { Text(station.name,fontSize=20.sp,fontWeight=FontWeight.Bold);Text("${Busan.find(station.districtId)?.name} · ${station.windowLabel}",color=Subtle) }
-                    BadgeText("+${station.xp} 데모 XP",Green)
+                    BadgeText("+${station.xp} 데모 XP",Gold)
                 }
                 Text("MOCK · 녹색 전력망 여유 / 충전소 운영 정보 미연동",fontSize=14.sp,color=Subtle)
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    Button(onClick={model.startMission(station)},enabled=canStart,modifier=Modifier.width(200.dp).heightIn(min=56.dp).testTag("mission-${station.id}")) {
+                    Button(onClick={model.startMission(station)},enabled=canStart,shape=RoundedCornerShape(14.dp),modifier=Modifier.width(200.dp).heightIn(min=56.dp).testTag("mission-${station.id}")) {
                         if(starting==station.id) { CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(8.dp)) }
                         Text(buttonLabel)
                     }
@@ -310,40 +316,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
     }
 }
 @Composable private fun CityScreen(g: GameState) {
-    val d=Busan.find(g.districtId)!!;val xp=g.cityXp(d.id);val level=CityLevels.level(xp)
-    var previewLevel by rememberSaveable(g.districtId,level) { mutableStateOf<Int?>(null) }
-    var zoom by rememberSaveable { mutableFloatStateOf(1f) }
-    var building by remember { mutableStateOf(false) }
-    val shown=CityStage.at(previewLevel ?: level)
-    val preview=shown.level!=level
-    Column(Modifier.verticalScroll(rememberScrollState())) {
-        Section("${d.name} · ${shown.name}",if(preview)"미리보기 Lv.${shown.level} · 실제 도시 레벨과 XP는 그대로 유지됩니다." else "${d.motif} 테마 · 중세에서 미래로 성장하는 가상 도시")
-        Panel(Modifier.fillMaxWidth()) {
-            FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                BadgeText(if(preview)"미리보기 · Lv.${shown.level}" else "내 도시 · Lv.$level",if(preview)Green else Blue)
-                OutlinedButton(onClick={previewLevel=null},enabled=preview,modifier=Modifier.testTag("cityCurrent")){Text("현재 도시로 돌아가기")}
-                Button(onClick={previewLevel=level+1},enabled=level<12,modifier=Modifier.testTag("cityPreview")){Text(if(level==12)"최고 레벨 달성" else "다음 레벨 미리보기 · Lv.${level+1}")}
-            }
-            Text("Lv.${shown.level} · ${shown.landmark}",fontSize=20.sp,fontWeight=FontWeight.Bold,modifier=Modifier.testTag("cityStageLabel"))
-            Crossfade(targetState=shown.level,animationSpec=tween(450),label="cityEvolution") { displayed ->
-                CityCanvas(displayed,d.id,Modifier.fillMaxWidth().aspectRatio(2f).testTag("cityScene").clickable{building=true},zoom)
-            }
-            Text(shown.description,fontSize=15.sp,color=Subtle)
-            Text("내 도시 Lv.$level · $xp 지역 XP",fontWeight=FontWeight.Bold)
-            LinearProgressIndicator(progress={CityLevels.progress(xp)},modifier=Modifier.fillMaxWidth(),trackColor=Pale)
-            FlowRow(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
-                OutlinedButton(onClick={zoom=(zoom+.15f).coerceAtMost(1.5f)}){Text("확대 +")}
-                OutlinedButton(onClick={zoom=(zoom-.15f).coerceAtLeast(.7f)}){Text("축소 −")}
-                TextButton(onClick={building=true}){Text("건물 정보")}
-            }
-        }
-        Spacer(Modifier.height(18.dp))
-        Text("성장 단계 둘러보기 · 선택하면 미리보기로 표시됩니다",fontSize=14.sp,color=Subtle)
-        Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            CityLevels.names.forEachIndexed { i,name -> FilterChip(selected=shown.level==i+1,onClick={previewLevel=if(i+1==level)null else i+1},label={Text("Lv.${i+1} $name")},modifier=Modifier.testTag("city-stage-${i+1}")) }
-        }
-        if(building) AlertDialog(onDismissRequest={building=false},title={Text("${d.name} · ${shown.landmark}")},text={Text("${shown.description}\n\n${if(preview) "Lv.${shown.level} 미리보기" else "내 도시 Lv.$level"} · 실제 건물·계통 데이터와 관계없는 가상 도시입니다.")},confirmButton={TextButton(onClick={building=false}){Text("확인")}})
-    }
+    CityCollectionScreen(g)
 }
 @Composable private fun RankingScreen(g: GameState,now: Long) {
     var cities by rememberSaveable { mutableStateOf(false) }

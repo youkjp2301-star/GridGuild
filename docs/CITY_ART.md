@@ -8,7 +8,14 @@
 - `app/src/main/res/drawable-nodpi/city_modern_v2.png`: Lv.5~8
 - `app/src/main/res/drawable-nodpi/city_future_v2.png`: Lv.9~12
 
-각 PNG는 2×2 타일 아틀라스이며 좌상단→우상단→좌하단→우하단 순서다. `CityStage.at`이 매 레벨을 서로 다른 (era, frame)에 연결한다. 원본 PNG를 보존하고 렌더링 시 각 프레임 경계를 2px 안쪽에서 읽는다. 화면 미리보기는 XP/원장을 변경하지 않는다.
+각 PNG는 2×2 타일 아틀라스이며 좌상단→우상단→좌하단→우하단 순서다. `CityStage.at`이 매 레벨을 서로 다른 (era, frame)에 연결한다. 원본 PNG를 보존하고 렌더링 시 각 프레임 경계를 2px 안쪽에서 읽는다. 해금한 도시 둘러보기는 XP/원장을 변경하지 않는다.
+
+## 0.3.0 해금 정책
+
+`CityUnlocks`는 현재 지역의 도시 XP로 실제 해금 단계를 계산하며 현재 및 과거 단계만 허용한다.
+`CityCanvas`는 아틀라스를 읽기 전에 `unlockedThrough`를 검사한다. 초기화 직후 전환 애니메이션의 이전 프레임에도 같은 제한을 적용한다.
+미해금 컬렉션 및 다음 단계 안내는 `LockedCityArtwork`의 공통 기하학 배경·자물쇠만 사용한다. 실제 도시 이미지의 블러·잘라내기·이름·랜드마크 미리보기를 제공하지 않는다.
+잠금 이미지는 Compose Canvas로 작성했으며 추가 생성 이미지나 외부 자산은 없다. 기존 도시 PNG는 변경하지 않았다.
 
 ## 생성 프롬프트
 

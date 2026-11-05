@@ -45,20 +45,39 @@ class UiRegressionTest {
         ui.onNodeWithTag("missionList").performScrollToNode(hasTestTag("mission-sasang-river"))
         ui.onNodeWithTag("mission-sasang-river").assertIsNotEnabled().assertTextContains("미션 진행 중")
     }
-    @Test fun previewChangesSceneAndNeverChangesXp() {
+    @Test fun lockedCitiesNeverShowArtAndNextStepOnlyShowsRequirements() {
         ui.onNodeWithTag("tab2").performClick()
         ui.onNodeWithTag("cityStageLabel").assertTextContains("Lv.1",substring=true)
-        screenshot("city-current-v2.png")
-        ui.onNodeWithTag("cityPreview").performClick()
-        ui.onNodeWithTag("cityStageLabel").assertTextContains("Lv.2",substring=true)
-        ui.onNodeWithContentDescription("사상구 Lv.2 성벽 도시 · 성문과 돌다리").assertExists()
-        screenshot("city-next-v2.png")
-        ui.onNodeWithTag("city-stage-12").performScrollTo().performClick()
-        ui.onNodeWithTag("cityStageLabel").performScrollTo().assertTextContains("Lv.12",substring=true)
-        screenshot("city-future-v2.png")
+        screenshot("premium-city-current.png")
+        ui.onNodeWithTag("cityNextCheck").performScrollTo().performClick()
+        ui.onNodeWithTag("cityLockedDialog").assertExists()
+        ui.onNodeWithTag("nextLockedImage").assertExists()
+        ui.onNodeWithText("Lv.2 해금까지 100 XP").assertExists()
+        ui.onNodeWithContentDescription("사상구 Lv.2 성벽 도시 · 성문과 돌다리").assertDoesNotExist()
+        screenshot("premium-next-locked.png")
+        ui.onNodeWithText("성장 계속하기").performClick()
+        ui.onNodeWithTag("cityCollection").performScrollTo().performScrollToNode(hasTestTag("city-stage-12"))
+        ui.onNodeWithTag("city-stage-12").assertIsDisplayed().assertIsNotEnabled()
+        ui.onNodeWithContentDescription("사상구 Lv.12 초진보 미래도시 · 미래 도시 랜드마크").assertDoesNotExist()
+        screenshot("premium-locked-collection.png")
         assertEquals(0,runBlocking{store.state.first().xp})
+    }
+    @Test fun onlyUnlockedCitiesCanBeRevisitedAndResetHidesFutureArt() {
+        runBlocking { store.update{it.copy(history=listOf(PointEvent("unlock-test","unlock-test","sasang",250,System.currentTimeMillis())))} }
+        ui.onNodeWithTag("tab2").performClick()
+        ui.waitUntil(8_000){ui.onAllNodesWithText("Lv.3 · 르네상스 도시").fetchSemanticsNodes().isNotEmpty()}
+        ui.onNodeWithTag("cityCollection").performScrollTo().performScrollToNode(hasTestTag("city-stage-1"))
+        ui.onNodeWithTag("city-stage-1").assertIsEnabled().performClick()
+        ui.onNodeWithTag("cityStageLabel").performScrollTo().assertTextContains("Lv.1",substring=true)
+        screenshot("premium-unlocked-history.png")
         ui.onNodeWithTag("cityCurrent").performScrollTo().performClick()
-        ui.onNodeWithTag("cityStageLabel").assertTextContains("Lv.1",substring=true)
+        ui.onNodeWithTag("cityStageLabel").assertTextContains("Lv.3",substring=true)
+        assertEquals(250,runBlocking{store.state.first().xp})
+        runBlocking { store.update{GameState(districtId="sasang")} }
+        ui.waitUntil(8_000){ui.onAllNodesWithText("Lv.1 · 중세 마을").fetchSemanticsNodes().isNotEmpty()}
+        ui.onNodeWithTag("cityCollection").performScrollTo().performScrollToNode(hasTestTag("city-stage-3"))
+        ui.onNodeWithTag("city-stage-3").assertIsDisplayed().assertIsNotEnabled()
+        ui.onNodeWithContentDescription("사상구 Lv.3 르네상스 도시 · 시장과 종탑").assertDoesNotExist()
     }
     @Test fun modeBadgeExplainsMockAndRepeatedSelectionKeepsMission() {
         ui.onNodeWithTag("modeInfo").performClick()

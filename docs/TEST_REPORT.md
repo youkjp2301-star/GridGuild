@@ -8,8 +8,8 @@
 | 공식 Pleos 이미지 | v2.1.0 API 34 x86_64, SHA1 `b4f858d5bcc6c71506d7edfc872bcb9e5a11acaa` 공식 목록과 일치 |
 | APK 빌드 | `:app:assembleDebug` 성공 |
 | Lint | `:app:lintDebug` 성공. 버전 업데이트 권고 등 경고는 남음 |
-| 단위 테스트 | `:core:test` 24개, 실패/오류 0 |
-| 화면 테스트 | **3개 통과**. 미션→경유지 Mock→개인/도시 120 XP→D단 차단→P단 복귀, SDK 불가→Mock 복귀, Activity 재생성 후 XP/안전 상태 복구 |
+| 단위 테스트 | 최신 0.3.0: `:core:test` **33개**, 실패/오류 0 |
+| 화면 테스트 | 최신 0.3.0: **7개 통과**. 도시 잠금·과거 도시 방문·XP 보존·초기화 시 재잠금, 배터리/미션 안정성, Mock 안내, 보상·P/D 차단·재생성 |
 | Git 추적 파일 구성 | 로컬 설정·SDK 폴더를 제외한 Git index export에서 assembleDebug + core:test + lintDebug 모두 성공 |
 | 실제 로컬 Clone | 첫 커밋 4a5fd0e를 `git clone --no-local`로 복제. JAVA_HOME/ANDROID_HOME만 지정해 APK + 24개 단위 테스트 + Lint 성공 (36초) |
 | 최종 코드 Clone | 코드 커밋 cfd0141로 fast-forward 후 같은 검사 재통과 (41초). local.properties 미포함 확인 |
@@ -61,3 +61,15 @@
 - 현재·다음·미래 도시, 홈 보상, Mock 안내, 미션 화면의 실제 에뮬레이터 PNG를 보고 레이아웃을 검토했다.
 - 사용자 데모 기록은 테스트 전에 앱 내부 파일로 백업했고, 테스트 후 복원본과 백업의 SHA256 일치를 확인했다. 앱 0.2.0 재실행 성공.
 - 이번 수정은 실제 Pleos 런타임을 재검증하지 않았다. 앞서 확인한 Vehicle 성공 / Navi 목적지 콜백 미수신 상태는 유지된다.
+
+## 2026-11-05 · 0.3.0 디자인/도시 해금 정책
+
+- `:app:assembleDebug :app:assembleDebugAndroidTest :core:test :app:lintDebug` 최종 성공 (14초). Lint 오류 0, 경고 9개. 새로 추가한 상태 boxing 정보 및 Undo 아이콘 deprecation도 정리했다.
+- 단위 테스트 **33개 통과**. 추가 4개에서 모든 현재/후보 레벨 조합, 잘못된 선택/해금 범위, 실제 XP 경계와 최고 단계의 필요 XP를 검사한다.
+- `GridGuildFlowTest,UiRegressionTest` 실제 API 34 에뮬레이터 실행: **OK (7 tests)**, 21.852초.
+- Lv.1에서 다음 단계 안내는 공통 잠금 이미지와 100 XP 조건만 표시한다. Lv.12 타일은 실제 화면에 표시되지만 비활성이고 미래 아트는 없다.
+- 도시 XP 250으로 Lv.3 해금 → Lv.1 방문 → 현재 Lv.3 복귀 시 XP 250 유지 → 데모 초기화 후 Lv.3 재잠금 및 미래 아트 비노출을 검증했다.
+- 정상 heartbeat 동안 배터리 상태/미션 버튼 안정성, Mock 설명·같은 모드 재선택 시 미션 유지, 보상·P/D 제한·SDK 불가 안내·Activity 재생성 회귀도 통과했다.
+- `artifacts/premium/`의 실제 도시·잠금 안내·잠긴 컬렉션·과거 도시·홈 보상·미션 캡처를 시각 검토했다. 산출물은 Git 제외다.
+- 사용자 진행 기록을 앱 내부 백업에서 복원하고 SHA256 일치를 확인했다. 설치 버전 0.3.0 / versionCode 3, 기존 기록으로 앱 재실행 성공.
+- SDK 호출과 주행 제한 정책 변경 없음. 이번 작업은 표준 Android Mock 화면 검증이며 실제 Pleos 런타임을 재실행한 결과가 아니다. Vehicle 기존 성공 / Navi 목적지 콜백 미수신 상태는 유지된다.
