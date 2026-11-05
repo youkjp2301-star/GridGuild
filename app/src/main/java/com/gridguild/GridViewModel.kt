@@ -51,14 +51,16 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun resume() {
         foreground=true
+        if(!automotive) platformAllowed.value=true
         if(automotive) platform=PlatformSafetyMonitor(getApplication()) { platformAllowed.value=it }.also { it.connect() }
-        if (ready.value) connect(game.value.mode)
+        if (ready.value && (activeMode!=game.value.mode || connectionJob?.isActive!=true)) connect(game.value.mode)
     }
     fun pause() {
-        foreground=false; connectionJob?.cancel(); connectionJob=null
-        navRepo?.close();navRepo=null;vehicleRepo?.close();vehicleRepo=null
-        activeMode=null;safety.value=SafetyState();vehicle.value=VehicleState();navigation.value=NavigationState()
-        platform?.close();platform=null;platformAllowed.value=!automotive
+        // Navigation may take the foreground while processing a request. Keep its callbacks and
+        // mission observations alive until this ViewModel is cleared; never keep game UI unlocked.
+        foreground=false
+        safety.value=SafetyState()
+        platform?.close();platform=null;platformAllowed.value=false
     }
     private fun connect(mode: AppMode) {
         connectionJob?.cancel(); vehicleRepo?.close();navRepo?.close()
@@ -68,7 +70,7 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
         val n=if(mode==AppMode.MOCK) MockNavigationRepository() else PleosNavigationRepository(getApplication(),viewModelScope)
         vehicleRepo=v;navRepo=n
         connectionJob=viewModelScope.launch {
-            launch { v.run() }
+            launch(Dispatchers.IO) { v.run() }
             launch { v.state.collect { sample ->
                 vehicle.value=sample
                 if (sample.usable(System.currentTimeMillis())) mutate { MissionEngine.observe(it,sample,System.currentTimeMillis()) }
@@ -112,5 +114,9 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
             mutate { GameState() };(vehicleRepo as? MockVehicleRepository)?.set(42f,ChargeSignal.OFF)
         }
     }
-    override fun onCleared() { pause();super.onCleared() }
+    override fun onCleared() {
+        pause();connectionJob?.cancel();connectionJob=null
+        navRepo?.close();navRepo=null;vehicleRepo?.close();vehicleRepo=null
+        super.onCleared()
+    }
 }

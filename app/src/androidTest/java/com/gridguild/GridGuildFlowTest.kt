@@ -60,4 +60,14 @@ class GridGuildFlowTest {
         compose.onNodeWithText("SDK 사용 불가 · MOCK 모드 선택").performClick()
         compose.waitUntil(15_000) { compose.onAllNodesWithTag("tab2").fetchSemanticsNodes().isNotEmpty() }
     }
+    @Test fun activityRecreationRestoresSavedProgressAndSafety() {
+        setup()
+        runBlocking { GameStore(InstrumentationRegistry.getInstrumentation().targetContext).update {
+            it.copy(history=listOf(PointEvent("restore-test","restore-test","sasang",120,System.currentTimeMillis())))
+        } }
+        compose.activityRule.scenario.recreate()
+        compose.waitUntil(15_000) { compose.onAllNodesWithTag("tab0").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("tab0").performClick()
+        compose.onNodeWithText("120 XP",substring=false).assertExists()
+    }
 }

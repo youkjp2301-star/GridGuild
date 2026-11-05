@@ -61,6 +61,17 @@ SDK 기어 API는 현재 SDK에 존재하지만 deprecated로 표시되어 있�
 - [Aside 조사 통합](docs/ASIDE_RESEARCH.md)
 - [검증 보고서](docs/TEST_REPORT.md)
 
+Pleos 전용 런타임 확인용 `PleosSdkProbeTest`도 포함한다. 표준 Android에서는 SDK 성공으로 처리하지 않고 건너뛴다.
+에뮬레이터의 현재 사용자 ID는 `adb shell am get-current-user`로 확인한다. 예를 들어 Pleos 사용자 10에서는:
+
+```text
+adb -s DEVICE_SERIAL install -r app/build/outputs/apk/debug/app-debug.apk
+adb -s DEVICE_SERIAL install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb -s DEVICE_SERIAL shell am instrument --user 10 -w -e class com.gridguild.PleosSdkProbeTest com.gridguild.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+SDK 값·콜백을 제한 시간 내 받지 못하면 실패 메시지를 기록한다. 이 검사는 실제 경유지 등록이나 충전 장소 인증을 대신하지 않는다.
+
 ## 교육장 PC / 집 PC에서 이어서 개발하기
 
 개발 기준은 루트 [PRD.md](PRD.md)이며, [DEV_LOG.md](DEV_LOG.md)에 구현·SDK 검증·테스트·다음 작업을 기록한다.

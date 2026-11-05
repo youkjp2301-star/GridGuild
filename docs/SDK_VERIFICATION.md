@@ -52,3 +52,11 @@
 - [공식 Windows/Linux 이미지 XML](https://nexus-playground.pleos.ai/repository/raw-releases/connect-avd/2.x/crp-sys-img.xml)
 
 XML 및 SDK 바이너리는 공개 접근 가능. 이미지 설치·사용은 해당 SDK 라이선스 조건이 적용된다. 로그인 여부와 API 사용 승인 여부는 구분한다.
+
+## 2026-11-05 실제 런타임 결과
+
+- Pleos API 34 전용 이미지 / 사용자 10에서 Vehicle 프로브 통과:
+  SOC 100.0%, 충전 스위치 OFF, GEAR_PARK, CarUxRestrictions 허용 수신.
+- Navi Service는 연결됐으나 목적지 콜백이 30초 내 오지 않아 프로브 실패.
+  목적지 설정 상태와 Navigation 앱의 전달 상태를 확인해야 하며, 현재는 실제 목적지/경유지 연동 완료로 표시하지 않는다.
+- Mock 화면 흐름 3개는 별도 표준 Android 이미지에서 통과했다. 실제 SDK 런타임 결과와 혼합하지 않는다.

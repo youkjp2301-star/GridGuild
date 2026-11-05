@@ -19,10 +19,13 @@ class PleosNavigationRepository(private val context: Context, private val scope:
     private var closed = false
     private var expected: Station? = null
     private var timeout: Job? = null
+    private var destinationTimeout: Job? = null
     private val listener = object : NaviHelperEventListener {
         override fun onDestinationInfo(info: DestinationInfo) {
             if (closed) return
-            state.update { it.copy(destination = info.name.ifBlank { "목적지 이름 없음" },lat=info.latitude,lon=info.longitude,source=DataSource.PLEOS) }
+            destinationTimeout?.cancel()
+            state.update { it.copy(destination = info.name.ifBlank { "목적지 이름 없음" },lat=info.latitude,lon=info.longitude,source=DataSource.PLEOS,
+                status=if(it.pending)it.status else "Pleos 목적지 콜백 수신") }
         }
         override fun onDestinationChanged() = refresh()
         override fun onWaypointChanged(info: WaypointChangedInfo) { safe { helper.getWaypointInfo() } }
@@ -61,7 +64,17 @@ class PleosNavigationRepository(private val context: Context, private val scope:
         timeout?.cancel(); expected=null
         state.update { it.copy(status=message,pending=false,confirmed=false) }
     }
-    override fun refresh() = safe { helper.getDestinationInfo(); helper.getWaypointInfo() }
+    override fun refresh() = safe {
+        destinationTimeout?.cancel()
+        state.update { it.copy(destination="목적지 조회 중",lat=null,lon=null,source=DataSource.UNAVAILABLE) }
+        helper.getDestinationInfo();helper.getWaypointInfo()
+        destinationTimeout=scope.launch {
+            delay(10_000)
+            if(!closed && state.value.source==DataSource.UNAVAILABLE) state.update {
+                it.copy(destination="목적지 정보 미수신",status=if(it.pending)it.status else "Pleos 연결됨 · 목적지 응답 시간 초과. 내비 목적지/서비스 상태를 확인하거나 MOCK을 선택하세요.")
+            }
+        }
+    }
     override fun addWaypoint(station: Station) = safe {
         if (state.value.pending) return@safe
         expected=station
@@ -76,7 +89,7 @@ class PleosNavigationRepository(private val context: Context, private val scope:
     }
     override fun reroute() = safe { helper.requestReRoute(); state.update { it.copy(status="재탐색 요청 전송 · 완료 미확인") } }
     override fun close() {
-        closed=true; timeout?.cancel(); expected=null
+        closed=true; timeout?.cancel(); destinationTimeout?.cancel(); expected=null
         runCatching { helper.removeListener(listener); helper.release() }; connected=false
     }
 }

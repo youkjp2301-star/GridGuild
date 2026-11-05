@@ -69,6 +69,14 @@ service-account*.json
 credentials/
 secrets/
 private/
+.pleos/
+.sdk/
+pleos*.properties
+sdk*.properties
+sdk-auth*.json
+auth.properties
+*.p8
+*.pkcs12
 
 # Optional local verification exports
 test-results/
