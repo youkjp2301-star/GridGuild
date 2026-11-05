@@ -71,7 +71,7 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
         vehicle.value=VehicleState();safety.value=SafetyState();navigation.value=NavigationState()
         activeMode=mode
         val v=if(mode==AppMode.MOCK) MockVehicleRepository() else PleosVehicleRepository(getApplication())
-        val n=if(mode==AppMode.MOCK) MockNavigationRepository() else PleosNavigationRepository(getApplication(),viewModelScope)
+        val n=if(mode==AppMode.MOCK) MockNavigationRepository(viewModelScope) else PleosNavigationRepository(getApplication(),viewModelScope)
         vehicleRepo=v;navRepo=n
         connectionJob=viewModelScope.launch {
             launch(Dispatchers.IO) { v.run() }
@@ -115,10 +115,15 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     fun cancelMission() = action { mutate { it.copy(mission=null) } }
-    fun addWaypoint(station: Station) = action { navRepo?.addWaypoint(station) }
-    fun setDestination(station: Station) = action { navRepo?.setDestination(station) }
-    fun refreshNavigation() = action { navRepo?.refresh() }
-    fun reroute() = action { navRepo?.reroute() }
+    private fun navigationAction(request: (NavigationRepository)->Unit) = action {
+        val repository=navRepo
+        if(repository==null) message.value="내비게이션 연결 준비 중입니다. 잠시 후 다시 시도하세요."
+        else if(!repository.state.value.pending) request(repository)
+    }
+    fun addWaypoint(station: Station) = navigationAction { it.addWaypoint(station) }
+    fun setDestination(station: Station) = navigationAction { it.setDestination(station) }
+    fun refreshNavigation() = navigationAction { it.refresh() }
+    fun reroute() = navigationAction { it.reroute() }
     fun mockSoc(value: Float) { (vehicleRepo as? MockVehicleRepository)?.set(soc=value) }
     fun mockCharge(on: Boolean) { (vehicleRepo as? MockVehicleRepository)?.set(charge=if(on) ChargeSignal.ON else ChargeSignal.OFF) }
     fun mockPark(parked: Boolean) { (vehicleRepo as? MockVehicleRepository)?.park(parked) }

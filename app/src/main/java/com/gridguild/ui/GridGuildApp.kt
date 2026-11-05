@@ -255,12 +255,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
         item { Panel(Modifier.fillMaxWidth()) {
             Text("SOC ${v.soc?.toInt() ?: "—"}% · 충전 스위치 ${v.chargeSwitch}",fontWeight=FontWeight.Bold,fontSize=20.sp)
             Text(reading.statusLabel,fontSize=14.sp,color=if(reading.fresh)Green else Subtle,modifier=Modifier.testTag("missionBatteryStatus"))
-            Text("${n.destination} · ${n.source}",color=Subtle)
-            Text(n.status,color=if(n.confirmed)Green else Subtle,modifier=Modifier.testTag("navStatus"))
-            Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick=model::refreshNavigation){Text("목적지 새로고침")}
-                OutlinedButton(onClick=model::reroute){Text("경로 재탐색 요청")}
-            }
+            NavigationControls(n,g.mode==AppMode.MOCK,model::refreshNavigation,model::reroute)
         } }
         g.mission?.let { m -> item { Panel(Modifier.fillMaxWidth().testTag("activeMission")) {
             Text("미션 진행 중 · ${m.source}",fontWeight=FontWeight.Bold,color=Blue)
@@ -297,7 +292,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                         Text(buttonLabel)
                     }
                     OutlinedButton(onClick={model.addWaypoint(station)},enabled=!n.pending,modifier=Modifier.heightIn(min=52.dp).testTag("waypoint-${station.id}")) { Text(if(g.mode==AppMode.MOCK) "경유지 추가 (MOCK)" else "샘플 좌표 경유지 요청") }
-                    TextButton(onClick={model.setDestination(station)}){Text("목적지로 설정")}
+                    TextButton(onClick={model.setDestination(station)},enabled=!n.pending,modifier=Modifier.testTag("destination-${station.id}")){Text("목적지로 설정")}
                 }
                 Text(when {
                     done -> "오늘의 보상은 이미 받았어요. 다음 충전소에 참여해 보세요."

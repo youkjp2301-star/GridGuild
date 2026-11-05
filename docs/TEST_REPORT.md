@@ -8,8 +8,8 @@
 | 공식 Pleos 이미지 | v2.1.0 API 34 x86_64, SHA1 `b4f858d5bcc6c71506d7edfc872bcb9e5a11acaa` 공식 목록과 일치 |
 | APK 빌드 | `:app:assembleDebug` 성공 |
 | Lint | `:app:lintDebug` 성공. 버전 업데이트 권고 등 경고는 남음 |
-| 단위 테스트 | 최신 0.4.0: `:core:test` **41개**, 실패/오류 0 |
-| 에뮬레이터 테스트 | 최신 0.4.0: **14개 통과** (화면 11 + 저장 코덱 3). 항목별 초기화·재적립·취소·재실행, 도시 잠금, 배터리/미션 안정성, Mock 안내, 보상·P/D 차단 |
+| 단위 테스트 | 최신 0.4.1: `:core:test` **41개**, 실패/오류 0 |
+| 에뮬레이터 테스트 | 최신 0.4.1: **20개 통과** (화면 13 + 저장 코덱 3 + 내비 테스트 전송 계층 4). 내비 반복 요청·오류·타임아웃, 항목별 초기화, 도시 잠금, 배터리/미션 안정성, P/D 차단 |
 | Git 추적 파일 구성 | 로컬 설정·SDK 폴더를 제외한 Git index export에서 assembleDebug + core:test + lintDebug 모두 성공 |
 | 실제 로컬 Clone | 첫 커밋 4a5fd0e를 `git clone --no-local`로 복제. JAVA_HOME/ANDROID_HOME만 지정해 APK + 24개 단위 테스트 + Lint 성공 (36초) |
 | 최종 코드 Clone | 코드 커밋 cfd0141로 fast-forward 후 같은 검사 재통과 (41초). local.properties 미포함 확인 |
@@ -85,3 +85,13 @@
 - 저장 코덱 3개 테스트로 schema 1의 기존 120 XP 유지, schema 2의 false 플래그/진행 미션 왕복 저장, 누락 필드·지원하지 않는 버전·손상 JSON의 명시적 실패를 확인했다.
 - 초기화 버튼/도시 초기화 확인창을 실제 PNG로 시각 검토했다. 테스트 후 사용자 백업/복원 파일 SHA256 일치 확인, 0.4.0 설치 및 기존 Lv.3·도시/개인 각 360 XP 표시 확인. Mock 테스트 패널을 열어 둔 상태다.
 - 캡처와 로그는 `artifacts/reset-controls/`, `.tools/reset-*`에 보관하며 Git 제외다. 실제 Pleos 런타임 검증을 추가한 작업은 아니다.
+
+## 2026-11-05 · 0.4.1 목적지/재탐색 버튼 수정
+
+- 원인: Mock `refresh()`가 Unit이었고 재탐색은 같은 상태 문자열을 반복했다. SDK 재탐색은 pending/타임아웃 및 전용 종료 콜백 처리가 없었다.
+- `:app:assembleDebug :app:assembleDebugAndroidTest :core:test :app:lintDebug` 최종 성공 (24초). Kotlin 41개 통과, Lint 오류 0 / 기존 경고 9개.
+- `NavigationFlowTest,NavigationRepositoryTest,DemoResetFlowTest,GameStateCodecTest,GridGuildFlowTest,UiRegressionTest` 표준 API 34 실행: **OK (20 tests)**, 40.154초.
+- 화면 2개 추가: 새로고침 반복 시 요청 번호 증가, 요청 중 다른 내비 버튼 비활성, 재탐색 데모 결과, 목적지 변경 후 새로고침/재탐색 시 목적지 보존 및 XP 무변경을 검증했다.
+- 테스트 전송 계층 4개 추가: Mock 반복/중복 방지/닫힌 뒤 상태 보존, SDK 전용 `onReRouteEnded` 대기, 일반 `onRoutingCompleted`로 잘못 완료하지 않음, 좌표 일치, 예외·미응답·오류와 재시도를 검증했다.
+- 전송 계층 테스트는 공식 SDK 타입을 사용하는 **FakeNaviClient**로 콜백 계약을 검사한다. 실제 Pleos 내비 서비스에서 성공한 결과가 아니다. 기존 실제 목적지 콜백 미수신/경유지 종단 미검증 상태는 유지한다.
+- `artifacts/navigation-fix/navigation-fixed.png` 실제 화면에서 버튼/처리 결과/요청 번호/시간/데모 설명을 검토했다. 사용자 기록은 복원 전후 SHA256 일치 확인, 앱 0.4.1 / versionCode 5 설치 및 재실행 성공.

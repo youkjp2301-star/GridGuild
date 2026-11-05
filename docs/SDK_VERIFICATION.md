@@ -22,7 +22,7 @@
 | 목적지 | `NaviHelper.getDestinationInfo`, `onDestinationInfo(DestinationInfo)` | 지원. 이벤트 수신 전 출처 UNAVAILABLE |
 | 목적지 설정 | `requestRoute(RouteInfo)` | 지원. 요청 전송을 성공 등록으로 표시하지 않음 |
 | 경유지 | `addWaypoint(RequestWaypointInfo)`, `getWaypointInfo`, `onWaypointChanged`, `onWayPointInfo` | 지원. 요청 뒤 실제 경유지 좌표를 재조회하여 일치할 때만 확인 표시; 12초 타임아웃 |
-| 재탐색 | `requestReRoute`, `onRoutingCompleted` | 지원. 전송·완료를 구분 |
+| 재탐색 | `requestReRoute`, `onReRouteEnded` | 지원. 전송과 공유 종료 알림 수신을 구분. 일반 `onRoutingCompleted`만으로 재탐색 완료 처리하지 않음 |
 | 정밀 경로 형상 | 공개 NaviHelper API에서 MVP에 필요한 전체 polyline 조회 계약 미확인 | 구현/지원으로 주장하지 않음. UI에 목적지 주변 거리 정렬·형상 미사용 표시 |
 | 충전소/계통/인증 | 현재 SDK 연동만으로 실제 충전소 운영·계통 여유·충전 위치 인증 보장 없음 | 전부 명시적 fixture. 모든 XP는 데모 성과 |
 
@@ -60,3 +60,12 @@ XML 및 SDK 바이너리는 공개 접근 가능. 이미지 설치·사용은 �
 - Navi Service는 연결됐으나 목적지 콜백이 30초 내 오지 않아 프로브 실패.
   목적지 설정 상태와 Navigation 앱의 전달 상태를 확인해야 하며, 현재는 실제 목적지/경유지 연동 완료로 표시하지 않는다.
 - Mock 화면 흐름 3개는 별도 표준 Android 이미지에서 통과했다. 실제 SDK 런타임 결과와 혼합하지 않는다.
+
+## 2026-11-05 목적지/재탐색 응답 계약 재확인
+
+- Aside가 공식 문서와 로컬 3.0.5 바이너리를 읽기 전용으로 대조했다. `requestReRoute()`는 반환값이 없으며 `onReRouteEnded()`를 가리킨다. 활성 경로 안내가 필요하다.
+- [재탐색 요청](https://document.pleos.ai/en/docs/pleos-only/connect-sdk-pleos/NaviHelper/navi-helper/ai.pleos.playground.navi.helper/navi-helper/request-re-route), [재탐색 종료](https://document.pleos.ai/en/docs/pleos-only/connect-sdk-pleos/NaviHelper/navi-helper/ai.pleos.playground.navi.helper.listener/navi-helper-event-listener/on-re-route-ended), [경로 안내](https://document.pleos.ai/en/docs/pleos-only/connect-sdk-pleos/NaviHelper/routes).
+- 이벤트에는 요청 ID가 없어 외부 경로 변경과 특정 요청의 인과관계를 보장할 수 없다. 앱은 동시 요청을 하나로 제한하고 ‘종료 알림 수신’으로 표시한다. 로컬 요청 번호는 UI 피드백용이다.
+- 목적지 변경 이벤트는 재조회 계기로 사용한다. 목적지 설정 확인은 실제 수신 좌표와 요청 좌표를 비교하며, 일반 경로 완료 알림만으로 성공 처리하지 않는다.
+- 빈 이름·(0,0)·미응답이 ‘목적지 없음’을 뜻한다는 계약은 확인되지 않았다. 앱은 유효 좌표 미확인/응답 시간 초과로 표시한다.
+- 콜백은 Main 디스패처로 직렬화한다. 동작 전 pending/타임아웃을 먼저 설정하고 예외·오류·종료 시 타이머를 취소한다. 실제 서비스 재탐색 성공은 여전히 미검증이다.
