@@ -12,6 +12,7 @@
 | 화면 테스트 | **3개 통과**. 미션→경유지 Mock→개인/도시 120 XP→D단 차단→P단 복귀, SDK 불가→Mock 복귀, Activity 재생성 후 XP/안전 상태 복구 |
 | Git 추적 파일 구성 | 로컬 설정·SDK 폴더를 제외한 Git index export에서 assembleDebug + core:test + lintDebug 모두 성공 |
 | 실제 로컬 Clone | 첫 커밋 4a5fd0e를 `git clone --no-local`로 복제. JAVA_HOME/ANDROID_HOME만 지정해 APK + 24개 단위 테스트 + Lint 성공 (36초) |
+| 최종 코드 Clone | 코드 커밋 cfd0141로 fast-forward 후 같은 검사 재통과 (41초). local.properties 미포함 확인 |
 | 표준 Android 실행 | API 34, 앱 설치·화면 표시 확인. 호스트 에뮬레이터 GPU/SystemUI ANR 발생 이력 있음 |
 | Pleos 실행 | 설치·부팅·앱 설치·최초 설정 화면 확인, 실제 권한 부여 확인 |
 | Virtual Console | SOC 42%, 충전 OFF, 기어 P 설정을 Aside가 UI에서 확인 |
@@ -46,3 +47,4 @@
 - GitHub CI: 원격 저장소를 생성·업로드하지 않아 아직 실행 안 함.
 
 로컬 테스트 산출물은 Git에 넣지 않는다. 재실행 명령과 최신 결과는 README/DEV_LOG에서 관리한다.
+최종 추적 파일 46개에 대한 비밀정보 패턴 검사와 Git 공백 검사를 통과했다. GitHub 원격 생성·인증·push는 수행하지 않았다.

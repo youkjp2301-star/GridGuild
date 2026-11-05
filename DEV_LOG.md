@@ -89,6 +89,10 @@
 - 실제 SDK 프로브: **2개 중 Vehicle 1개 통과, Navi 1개 실패**, 48.561초. 실패를 통과로 처리하지 않았다.
   Vehicle SDK에서 `source=PLEOS, soc=100.0, chargeSwitch=OFF`, 기어 `GEAR_PARK`, UX 허용을 수신했다.
   Navi Service는 연결됐지만 목적지 콜백이 30초 내 오지 않았다. 목적지 응답 미수신 시 10초 후 오류를 표시하도록 수정했다.
+- 코드 커밋 `cfd0141`을 별도 Clone에 fast-forward 반영한 뒤 APK·24개 단위 테스트·Lint 재검증 성공 (41초).
+  Clone에는 `local.properties`가 없으며 JAVA_HOME/ANDROID_HOME만 사용했다.
+- 최종 Git 추적 파일 **46개** 비밀정보 검사 통과. SDK 바이너리·로컬 설정·APK·개인 키가 추적되지 않고 Wrapper JAR만 포함됨을 확인했다.
+- 로컬 `main` 커밋: `4a5fd0e` 초기 프로젝트, `cfd0141` SDK 수명주기/런타임 검증. GitHub origin은 미설정이다.
 
 ### 5. 남아 있는 오류와 다음 작업
 
