@@ -90,14 +90,30 @@ class NavigationRepositoryTest {
             assertEquals(closed,repo.state.value)
         } finally { main{repo.close()};scope.cancel() }
     }
+    @Test fun sdkDestinationChangedEventAutomaticallyRequeriesAndUpdatesNearbyCandidates()=runBlocking {
+        val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main)
+        val client=FakeNaviClient();val repo=PleosNavigationRepository(client,scope,true)
+        try {
+            val west=DemoDestinations.places.first()
+            main{repo.connect();client.listener.onDestinationInfo(destination(west.lat,west.lon))};repo.finished()
+            assertEquals(listOf("sasang-river"),ChargingRecommendations.around(repo.state.value.lat,repo.state.value.lon,42f).nearby.map{it.station.id})
+            val reads=client.reads
+            main{client.listener.onDestinationChanged()}
+            assertTrue(repo.state.value.pending);assertEquals(reads+1,client.reads)
+            val east=DemoDestinations.places[1]
+            main{client.listener.onDestinationInfo(destination(east.lat,east.lon))};repo.finished()
+            assertEquals(listOf("centum","gwangalli"),ChargingRecommendations.around(repo.state.value.lat,repo.state.value.lon,42f).nearby.map{it.station.id})
+        } finally { main{repo.close()};scope.cancel() }
+    }
 }
 
 private class FakeNaviClient : NaviClient {
     lateinit var listener: NaviHelperEventListener
     var reroutes=0
     var throwOnRead=false
+    var reads=0
     override fun connect(listener: NaviHelperEventListener,onConnected: ()->Unit,onFailed: (Throwable)->Unit) { this.listener=listener;onConnected() }
-    override fun getDestinationInfo() { if(throwOnRead)error("fake read failure") }
+    override fun getDestinationInfo() { reads++;if(throwOnRead)error("fake read failure") }
     override fun getWaypointInfo()=Unit
     override fun requestReRoute() { reroutes++ }
     override fun addWaypoint(info: RequestWaypointInfo)=Unit

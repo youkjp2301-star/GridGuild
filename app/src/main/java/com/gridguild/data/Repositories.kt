@@ -64,7 +64,9 @@ class MockVehicleRepository : VehicleRepository {
     override fun close() = Unit
 }
 class MockNavigationRepository(private val scope: CoroutineScope,private val responseDelayMillis: Long=650) : NavigationRepository {
-    override val state = MutableStateFlow(NavigationState("부산시민공원 (MOCK)",35.1684,129.0574,DataSource.MOCK,"데모 목적지 · 실제 내비게이션과 연결되지 않습니다",destinationUpdatedAt=System.currentTimeMillis()))
+    override val state = MutableStateFlow(DemoDestinations.places.first().let {
+        NavigationState("${it.name} (MOCK)",it.lat,it.lon,DataSource.MOCK,"데모 목적지 · 실제 내비게이션과 연결되지 않습니다",destinationUpdatedAt=System.currentTimeMillis())
+    })
     private val requests=NavigationRequests(state,scope)
     override fun connect() = Unit
     private fun simulate(operation: NavigationOperation,start: String,result: String,update: (NavigationState)->NavigationState={it}) {
@@ -81,11 +83,19 @@ class MockNavigationRepository(private val scope: CoroutineScope,private val res
         simulate(NavigationOperation.WAYPOINT,"데모 경유지 추가 중…","데모 경유지 반영 완료: ${station.name} · 실제 내비 등록 아님")
     }
     override fun setDestination(station: Station) {
+        changeDestination(station.name,station.lat,station.lon)
+    }
+    fun setDemoDestination(destination: DemoDestination) {
+        // Only prepared test locations can enter this Mock-only path.
+        DemoDestinations.places.firstOrNull{it.id==destination.id}?.let{changeDestination(it.name,it.lat,it.lon)}
+    }
+    fun randomDestination() { setDemoDestination(DemoDestinations.randomOther(state.value.lat,state.value.lon)) }
+    private fun changeDestination(name: String,lat: Double,lon: Double) {
         val id=requests.begin(NavigationOperation.DESTINATION,"데모 목적지 설정 중…") ?: return
         scope.launch {
             delay(responseDelayMillis)
-            requests.complete(id,"데모 목적지 설정 완료 · 목적지 주변 샘플 충전소를 정렬했습니다") {
-                it.copy(destination="${station.name} (MOCK)",lat=station.lat,lon=station.lon,destinationUpdatedAt=System.currentTimeMillis())
+            requests.complete(id,"데모 목적지 설정 완료 · 주변 샘플 충전소를 자동으로 갱신했습니다") {
+                it.copy(destination="$name (MOCK)",lat=lat,lon=lon,destinationUpdatedAt=System.currentTimeMillis())
             }
         }
     }

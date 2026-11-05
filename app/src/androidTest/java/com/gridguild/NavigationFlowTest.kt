@@ -22,6 +22,7 @@ class NavigationFlowTest {
         runBlocking{store.update{GameState(districtId="sasang")}}
         ui.waitUntil(15_000){ui.onAllNodesWithTag("tab1").fetchSemanticsNodes().isNotEmpty()}
         ui.onNodeWithTag("tab1").performClick()
+        show("navTools");ui.onNodeWithTag("navTools").performClick()
     }
     private fun show(tag: String)=ui.onNodeWithTag("missionList").performScrollToNode(hasTestTag(tag))
     private fun result(text: String) { ui.waitUntil(8_000){ui.onAllNodesWithText(text,substring=true).fetchSemanticsNodes().isNotEmpty()} }
@@ -44,6 +45,9 @@ class NavigationFlowTest {
         assertEquals(0,runBlocking{store.state.first().xp})
     }
     @Test fun refreshKeepsTheSelectedDestinationAndItsNearbyRecommendations() {
+        show("changeDemoDestination");ui.onNodeWithTag("changeDemoDestination").performClick()
+        ui.onNodeWithTag("demo-destination-centum").performClick()
+        show("navStatus");result("데모 목적지 설정 완료")
         show("destination-centum");ui.onNodeWithTag("destination-centum").performClick()
         show("navStatus");result("데모 목적지 설정 완료")
         ui.onNodeWithTag("navDestination").assertTextContains("센텀 녹색 충전소",substring=true)

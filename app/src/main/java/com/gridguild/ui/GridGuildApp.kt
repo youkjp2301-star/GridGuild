@@ -249,22 +249,35 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
     val starting by model.startingMission.collectAsStateWithLifecycle()
     val listState=rememberLazyListState()
     LaunchedEffect(g.mission?.id) { if(g.mission!=null) listState.animateScrollToItem(0) }
-    val stations=SampleData.recommend(n.lat,n.lon,v.soc)
+    val recommendations=ChargingRecommendations.around(n.lat,n.lon,v.soc)
+    val stations=recommendations.nearby.map{it.station}
     LazyColumn(state=listState,modifier=Modifier.testTag("missionList"),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         item { Section("충전 미션","내 이동에 맞는 충전으로, 도시의 다음 단계를 준비해요.") }
         item { Panel(Modifier.fillMaxWidth()) {
             Text("SOC ${v.soc?.toInt() ?: "—"}% · 충전 스위치 ${v.chargeSwitch}",fontWeight=FontWeight.Bold,fontSize=20.sp)
             Text(reading.statusLabel,fontSize=14.sp,color=if(reading.fresh)Green else Subtle,modifier=Modifier.testTag("missionBatteryStatus"))
-            NavigationControls(n,g.mode==AppMode.MOCK,model::refreshNavigation,model::reroute)
+            NavigationControls(n,g.mode==AppMode.MOCK,model::refreshNavigation,model::reroute,model::changeDemoDestination,model::randomDemoDestination)
+        } }
+        item { Panel(Modifier.fillMaxWidth()) {
+            Text(if(recommendations.status==RecommendationStatus.HIGH_SOC)"충전 추천 중지" else "목적지 주변 충전소 · ${stations.size}곳",fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.testTag("nearbySummary"))
+            Text(when(recommendations.status) {
+                RecommendationStatus.READY -> "반경 5 km 안의 샘플을 가까운 순서로 표시합니다."
+                RecommendationStatus.NO_DESTINATION -> "목적지 좌표를 확인하면 주변 후보가 표시됩니다."
+                RecommendationStatus.HIGH_SOC -> "SOC 90% 이상으로 추가 충전을 권장하지 않습니다."
+                RecommendationStatus.NO_NEARBY -> if(g.mode==AppMode.MOCK)"목적지 반경 5 km 안에 샘플 충전소가 없습니다. 다른 테스트 목적지를 선택해 보세요."
+                    else "목적지 반경 5 km 안에 샘플 충전소가 없습니다. 실제 시설의 부재를 뜻하지 않습니다."
+            },fontSize=13.sp,color=Subtle,modifier=Modifier.testTag("nearbyReason"))
+            if(n.hasDestination && recommendations.status!=RecommendationStatus.HIGH_SOC) NearbyStationMap(n.lat!!,n.lon!!,recommendations.nearby)
         } }
         g.mission?.let { m -> item { Panel(Modifier.fillMaxWidth().testTag("activeMission")) {
             Text("미션 진행 중 · ${m.source}",fontWeight=FontWeight.Bold,color=Blue)
+            Text(SampleData.stations.firstOrNull{it.id==m.stationId}?.name ?: m.stationId,fontWeight=FontWeight.SemiBold)
+            Text("목적지를 변경해도 이미 시작한 미션은 유지됩니다.",fontSize=13.sp,color=Subtle)
             Text("시작 SOC ${m.baselineSoc.toInt()}% → 목표 ${(m.baselineSoc+m.requiredGain).toInt()}% · 충전 ON + SOC 2%p 증가")
             LinearProgressIndicator(progress={m.progress},modifier=Modifier.fillMaxWidth(),trackColor=Pale)
             Text("${(m.progress*100).toInt()}% · 권장 시간 내 조건 충족 시 자동 완료 · 위치 미인증 데모 XP",fontSize=14.sp,color=Subtle)
             TextButton(onClick=model::cancelMission){Text("미션 취소")}
         } } }
-        if(stations.isEmpty()) item { Text("SOC 90% 이상으로 추가 충전을 권장하지 않습니다.") }
         items(stations,key={it.id}) { station ->
             val done=g.completedToday(station.id,now)
             val correctSource=v.source==if(g.mode==AppMode.MOCK)DataSource.MOCK else DataSource.PLEOS
@@ -282,7 +295,11 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
             Panel(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment=Alignment.CenterVertically) {
                     Surface(color=SoftGreen,shape=RoundedCornerShape(14.dp)){Icon(Icons.Outlined.EvStation,null,tint=Green,modifier=Modifier.padding(12.dp).size(26.dp))};Spacer(Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) { Text(station.name,fontSize=20.sp,fontWeight=FontWeight.Bold);Text("${Busan.find(station.districtId)?.name} · ${station.windowLabel}",color=Subtle) }
+                    Column(Modifier.weight(1f)) {
+                        Text("${stations.indexOf(station)+1}. ${station.name}",fontSize=20.sp,fontWeight=FontWeight.Bold)
+                        Text("${Busan.find(station.districtId)?.name} · ${station.windowLabel}",color=Subtle)
+                        Text("목적지에서 직선 %.1f km".format(java.util.Locale.KOREA,recommendations.nearby.first{it.station.id==station.id}.distanceKm),fontSize=13.sp,color=Green)
+                    }
                     BadgeText("+${station.xp} 데모 XP",Gold)
                 }
                 Text("MOCK · 녹색 전력망 여유 / 충전소 운영 정보 미연동",fontSize=14.sp,color=Subtle)
@@ -292,7 +309,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                         Text(buttonLabel)
                     }
                     OutlinedButton(onClick={model.addWaypoint(station)},enabled=!n.pending,modifier=Modifier.heightIn(min=52.dp).testTag("waypoint-${station.id}")) { Text(if(g.mode==AppMode.MOCK) "경유지 추가 (MOCK)" else "샘플 좌표 경유지 요청") }
-                    TextButton(onClick={model.setDestination(station)},enabled=!n.pending,modifier=Modifier.testTag("destination-${station.id}")){Text("목적지로 설정")}
+                    TextButton(onClick={model.setDestination(station)},enabled=!n.pending,modifier=Modifier.testTag("destination-${station.id}")){Text(if(g.mode==AppMode.MOCK)"목적지로 설정 (테스트)" else "샘플 좌표로 내비 목적지 요청")}
                 }
                 Text(when {
                     done -> "오늘의 보상은 이미 받았어요. 다음 충전소에 참여해 보세요."

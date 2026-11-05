@@ -8,8 +8,8 @@
 | 공식 Pleos 이미지 | v2.1.0 API 34 x86_64, SHA1 `b4f858d5bcc6c71506d7edfc872bcb9e5a11acaa` 공식 목록과 일치 |
 | APK 빌드 | `:app:assembleDebug` 성공 |
 | Lint | `:app:lintDebug` 성공. 버전 업데이트 권고 등 경고는 남음 |
-| 단위 테스트 | 최신 0.4.1: `:core:test` **41개**, 실패/오류 0 |
-| 에뮬레이터 테스트 | 최신 0.4.1: **20개 통과** (화면 13 + 저장 코덱 3 + 내비 테스트 전송 계층 4). 내비 반복 요청·오류·타임아웃, 항목별 초기화, 도시 잠금, 배터리/미션 안정성, P/D 차단 |
+| 단위 테스트 | 최신 0.5.0: `:core:test` **45개**, 실패/오류 0 |
+| 에뮬레이터 테스트 | 최신 0.5.0: **24개 통과** (화면 16 + 저장 코덱 3 + 내비 테스트 전송 계층 5). 목적지 선택/랜덤/후보 갱신·미션 보존·고SOC, 기존 초기화·잠금·배터리/미션·P/D 제한 |
 | Git 추적 파일 구성 | 로컬 설정·SDK 폴더를 제외한 Git index export에서 assembleDebug + core:test + lintDebug 모두 성공 |
 | 실제 로컬 Clone | 첫 커밋 4a5fd0e를 `git clone --no-local`로 복제. JAVA_HOME/ANDROID_HOME만 지정해 APK + 24개 단위 테스트 + Lint 성공 (36초) |
 | 최종 코드 Clone | 코드 커밋 cfd0141로 fast-forward 후 같은 검사 재통과 (41초). local.properties 미포함 확인 |
@@ -95,3 +95,13 @@
 - 테스트 전송 계층 4개 추가: Mock 반복/중복 방지/닫힌 뒤 상태 보존, SDK 전용 `onReRouteEnded` 대기, 일반 `onRoutingCompleted`로 잘못 완료하지 않음, 좌표 일치, 예외·미응답·오류와 재시도를 검증했다.
 - 전송 계층 테스트는 공식 SDK 타입을 사용하는 **FakeNaviClient**로 콜백 계약을 검사한다. 실제 Pleos 내비 서비스에서 성공한 결과가 아니다. 기존 실제 목적지 콜백 미수신/경유지 종단 미검증 상태는 유지한다.
 - `artifacts/navigation-fix/navigation-fixed.png` 실제 화면에서 버튼/처리 결과/요청 번호/시간/데모 설명을 검토했다. 사용자 기록은 복원 전후 SHA256 일치 확인, 앱 0.4.1 / versionCode 5 설치 및 재실행 성공.
+
+## 2026-11-05 · 0.5.0 목적지 변경·반경 추천
+
+- `:app:assembleDebug :app:assembleDebugAndroidTest :core:test :app:lintDebug` 최종 성공 (13초). 단위 45개 통과, Lint 오류 0 / 기존 경고 9개.
+- `DestinationDemoFlowTest,NavigationFlowTest,NavigationRepositoryTest,DemoResetFlowTest,GameStateCodecTest,GridGuildFlowTest,UiRegressionTest` 실행: **OK (24 tests)**, 48.805초.
+- 새 단위 4개: 목적지별 반경 필터/순서 및 원래 충전소 좌표 보존, 미확인/고SOC/후보 없음 구분, Haversine 거리/반경, 랜덤 위치의 현재 제외를 검증했다.
+- 새 화면 3개: 삼락 1→센텀 2→기장 0, 랜덤 위치 변경, 진행 미션 보존 및 빈 후보 지역에서 기존 미션 +120 XP 완료, SOC 90/89 구분을 검증했다.
+- 추가 전송 계층 1개는 SDK onDestinationChanged 이벤트를 FakeNaviClient로 전달해 자동 재조회/후보 변경을 검사한다. 실제 Pleos 내비 서비스 성공으로 집계하지 않는다.
+- 일반 앱에서도 센텀→광안리→기장을 직접 눌러 후보 수 2→2→0 및 첫 후보 센텀→광안 변경을 확인했다. 테스트 전 원래 데이터를 복원하고 수동 QA 후에도 백업과 저장 파일 SHA256 일치를 확인했다.
+- 0.5.0 / versionCode 6 설치. 위치도/목적지 선택/빈 후보 실제 PNG를 시각 검토했다. 자세한 피드백은 `docs/DESTINATION_FEEDBACK.md`, 캡처는 Git 제외 `artifacts/destination-demo/`다.

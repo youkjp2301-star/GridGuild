@@ -124,6 +124,12 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
     fun setDestination(station: Station) = navigationAction { it.setDestination(station) }
     fun refreshNavigation() = navigationAction { it.refresh() }
     fun reroute() = navigationAction { it.reroute() }
+    fun changeDemoDestination(destination: DemoDestination) = navigationAction { repository ->
+        if(game.value.mode==AppMode.MOCK) (repository as? MockNavigationRepository)?.setDemoDestination(destination)
+    }
+    fun randomDemoDestination() = navigationAction { repository ->
+        if(game.value.mode==AppMode.MOCK) (repository as? MockNavigationRepository)?.randomDestination()
+    }
     fun mockSoc(value: Float) { (vehicleRepo as? MockVehicleRepository)?.set(soc=value) }
     fun mockCharge(on: Boolean) { (vehicleRepo as? MockVehicleRepository)?.set(charge=if(on) ChargeSignal.ON else ChargeSignal.OFF) }
     fun mockPark(parked: Boolean) { (vehicleRepo as? MockVehicleRepository)?.park(parked) }
