@@ -25,12 +25,40 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## 데모 흐름
 
+### 이 PC에서 직접 앱 열기
+
+현재 PC에는 `.tools`에 에뮬레이터가 설치되어 있고 APK도 생성되어 있다.
+아래는 **현재 PC 전용** 빠른 실행 방법이다. 다른 PC에서는 아래의 Clone 환경 설정을 먼저 따른다.
+
+PowerShell에서 다음을 실행하면 에뮬레이터 창이 열린다.
+
+```powershell
+cd C:\Users\User\Desktop\Gridguild
+Start-Process -FilePath '.\.tools\android-sdk\emulator\emulator.exe' -ArgumentList '-avd GridGuild_Mock_API34 -gpu host -feature -Vulkan -no-snapshot' -WindowStyle Normal
+```
+
+Android 홈 화면이 나타날 때까지 기다린 뒤, 같은 PowerShell에서 아래를 실행한다.
+이 명령의 `-e`는 에뮬레이터가 하나만 실행된 경우를 전제로 한다.
+
+```powershell
+$gridAdb = '.\.tools\android-sdk\platform-tools\adb.exe'
+& $gridAdb -e install -r '.\app\build\outputs\apk\debug\app-debug.apk'
+& $gridAdb -e shell am start -n com.gridguild/.MainActivity
+```
+
+아래 순서로 직접 테스트한다. 앱 데이터가 이미 저장되어 있으면 첫 지역 선택 화면을 건너뛸 수 있다.
+
 1. 소속 구·군을 선택하고 MOCK으로 시작한다.
 2. 충전 미션 → 삼락 강변 충전소 → 경유지 추가(MOCK) → 미션 시작.
 3. 상단 연결·테스트에서 충전 ON, SOC +2%를 누른다.
 4. 개인·도시 120 XP, 도시 Lv.2, 랭킹 반영을 확인한다.
 5. D단 또는 UX 제한을 누르면 도시와 게임 조작이 차단된다. P단으로 돌아오면 도시가 열린다.
 6. 앱을 종료·재실행해 지역/XP/진행 미션이 유지되는지 확인한다.
+
+기존 XP가 있다면 개인·도시 XP가 각각 **120 증가**하는지 확인한다.
+충전소 버튼이 이미 '오늘 완료'이면 다른 상시 미션을 선택하거나,
+연결·테스트의 '데모 데이터 초기화'를 확인 후 실행해 처음부터 테스트할 수 있다. 초기화는 기존 데모 기록을 지운다.
+실제 SDK 테스트에는 `GridGuild_Pleos_API34`가 필요하며, 현재 Navi 목적지 콜백은 미완료 항목이다.
 
 시간대는 Asia/Seoul. 센텀 야간 미션은 22–07시, 나머지 fixture는 상시다.
 샘플 3곳의 미션을 같은 한국 날짜에 모두 완료하면 데모 50 XP를 추가 지급한다.
