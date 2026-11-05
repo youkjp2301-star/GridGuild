@@ -20,6 +20,9 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
     val message = MutableStateFlow("")
     val reward = MutableStateFlow(0)
     val now = MutableStateFlow(System.currentTimeMillis())
+    val vehicleReading = combine(vehicle,now) { sample,_ -> VehicleReading.capture(sample,System.currentTimeMillis()) }
+        .stateIn(viewModelScope,SharingStarted.Eagerly,VehicleReading(VehicleState(),false))
+    val startingMission = MutableStateFlow<String?>(null)
     private val automotive=application.packageManager.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)
     val platformAllowed=MutableStateFlow(!automotive)
     private var platform: PlatformSafetyMonitor?=null
@@ -40,6 +43,7 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
                     launch { delay(3_000); reward.value=0 }
                 }
                 game.value=next; ready.value=true
+                if(next.mission?.stationId==startingMission.value || old.mode!=next.mode) startingMission.value=null
                 if (foreground && activeMode!=next.mode) connect(next.mode)
             }
         }
@@ -80,10 +84,10 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
             n.connect()
         }
     }
-    private suspend fun mutate(action: (GameState) -> GameState) {
-        try { store.update(action) }
+    private suspend fun mutate(action: (GameState) -> GameState): Boolean {
+        return try { store.update(action);true }
         catch (e: CancellationException) { throw e }
-        catch (e: Exception) { message.value=e.message ?: "데이터 저장 실패" }
+        catch (e: Exception) { message.value=e.message ?: "데이터 저장 실패";false }
     }
     private fun action(allowSetup: Boolean=false, block: suspend () -> Unit) {
         if (!allowSetup && !(platformAllowed.value && safety.value.allowsGame(System.currentTimeMillis()))) { message.value="안전한 주차 및 플랫폼 허용 상태에서 이용하세요";return }
@@ -94,11 +98,21 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
         if (Busan.find(district)!=null) mutate { it.copy(districtId=district,mode=mode,mission=null) }
     }
     fun setMode(mode: AppMode) = action(allowSetup=true) {
+        if(mode==game.value.mode) {
+            message.value=if(mode==AppMode.MOCK) "현재 데모 모드입니다. 충전 ON과 SOC +2%로 미션을 테스트하세요." else "현재 Pleos SDK 모드입니다. 아래에서 연결 상태를 확인하세요."
+            return@action
+        }
         // Can select Mock when the real SDK is unavailable; real mission is cancelled, never mixed.
         mutate { it.copy(mode=mode,mission=null) }
     }
-    fun startMission(station: Station) = action {
-        mutate { MissionEngine.start(it,station,vehicle.value,System.currentTimeMillis(),"${station.id}:${UUID.randomUUID()}") }
+    fun startMission(station: Station) {
+        if(!(platformAllowed.value && safety.value.allowsGame(System.currentTimeMillis()))) {
+            message.value="안전한 주차 및 플랫폼 허용 상태에서 이용하세요";return
+        }
+        if(!startingMission.compareAndSet(null,station.id)) return
+        viewModelScope.launch {
+            if(!mutate { MissionEngine.start(it,station,vehicle.value,System.currentTimeMillis(),"${station.id}:${UUID.randomUUID()}") }) startingMission.value=null
+        }
     }
     fun cancelMission() = action { mutate { it.copy(mission=null) } }
     fun addWaypoint(station: Station) = action { navRepo?.addWaypoint(station) }

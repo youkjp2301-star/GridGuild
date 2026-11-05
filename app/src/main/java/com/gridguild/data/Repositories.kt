@@ -3,6 +3,7 @@ package com.gridguild.data
 import com.gridguild.core.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 
 interface VehicleRepository : AutoCloseable {
     val state: StateFlow<VehicleState>
@@ -25,10 +26,11 @@ interface NavigationRepository : AutoCloseable {
 }
 
 class MockVehicleRepository : VehicleRepository {
-    override val state = MutableStateFlow(VehicleState(42f, ChargeSignal.OFF, DataSource.MOCK, detail = "MOCK · 수동 시뮬레이션"))
-    override val safety = MutableStateFlow(SafetyState(true, true, source = DataSource.MOCK, detail = "MOCK · P단 / UX 허용"))
-    fun set(soc: Float? = state.value.soc, charge: ChargeSignal = state.value.chargeSwitch) {
-        state.value = state.value.copy(soc = soc?.coerceIn(0f,100f), chargeSwitch = charge, sampledAt = System.currentTimeMillis())
+    override val state = MutableStateFlow(VehicleState(42f, ChargeSignal.OFF, DataSource.MOCK, System.currentTimeMillis(), "MOCK · 수동 시뮬레이션"))
+    override val safety = MutableStateFlow(SafetyState(true, true, System.currentTimeMillis(), DataSource.MOCK, "MOCK · P단 / UX 허용"))
+    fun set(soc: Float? = null, charge: ChargeSignal? = null) {
+        state.update { current -> current.copy(soc = soc?.coerceIn(0f,100f) ?: current.soc,
+            chargeSwitch = charge ?: current.chargeSwitch, sampledAt = System.currentTimeMillis()) }
     }
     fun park(parked: Boolean, ux: Boolean = parked) {
         safety.value = SafetyState(parked,ux,System.currentTimeMillis(),DataSource.MOCK,
@@ -36,8 +38,9 @@ class MockVehicleRepository : VehicleRepository {
     }
     override suspend fun run() {
         while (true) {
-            set()
-            safety.value = safety.value.copy(sampledAt = System.currentTimeMillis())
+            // Heartbeats must never restore values captured before a user pressed a control.
+            state.update { it.copy(sampledAt = System.currentTimeMillis()) }
+            safety.update { it.copy(sampledAt = System.currentTimeMillis()) }
             kotlinx.coroutines.delay(1_000)
         }
     }

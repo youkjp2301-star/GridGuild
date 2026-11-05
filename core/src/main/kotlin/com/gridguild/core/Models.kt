@@ -29,6 +29,19 @@ data class SafetyState(
     fun allowsGame(now: Long) = parked && uxAllowed && source != DataSource.UNAVAILABLE && now - sampledAt in 0..10_000
 }
 
+/** One observation instant for all UI consumers; composables must not re-evaluate timestamps. */
+data class VehicleReading(val vehicle: VehicleState, val fresh: Boolean) {
+    val statusLabel: String get() = when {
+        fresh && vehicle.source == DataSource.MOCK -> "데모 데이터 정상"
+        fresh -> "최신 차량 데이터"
+        vehicle.source == DataSource.UNAVAILABLE || vehicle.soc == null || vehicle.chargeSwitch == ChargeSignal.UNKNOWN -> "차량 데이터 확인 중"
+        else -> "차량 데이터 갱신 지연"
+    }
+    companion object {
+        fun capture(vehicle: VehicleState, observedAt: Long) = VehicleReading(vehicle, vehicle.usable(observedAt))
+    }
+}
+
 data class District(val id: String, val name: String, val motif: String)
 object Busan {
     val districts = listOf(
