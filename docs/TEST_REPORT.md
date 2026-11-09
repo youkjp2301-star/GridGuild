@@ -8,8 +8,8 @@
 | 공식 Pleos 이미지 | v2.1.0 API 34 x86_64, SHA1 `b4f858d5bcc6c71506d7edfc872bcb9e5a11acaa` 공식 목록과 일치 |
 | APK 빌드 | `:app:assembleDebug` 성공 |
 | Lint | `:app:lintDebug` 성공. 버전 업데이트 권고 등 경고는 남음 |
-| 단위 테스트 | 최신 0.8.0: `:core:test` **64개**, 실패/오류 0 |
-| 에뮬레이터 테스트 | 최신 0.8.0: **39개 통과**, 110.998초. 기존35개 + 이용 현황4개. HOME·ROUTE·초기화·저장·잠금·배터리/미션·P/D 및 데모 내비 전송 계층 포함. 실제 Navi SDK 성공 수치가 아님 |
+| 단위 테스트 | 최신 0.9.0: `:core:test` **68개**, 실패/오류 0 |
+| 에뮬레이터 테스트 | 최신 0.9.0: **44개 통과**, 249.624초. 기존39개 + 로딩2/데모 흐름3개. 실제 Navi SDK 성공 수치가 아님 |
 | Git 추적 파일 구성 | 로컬 설정·SDK 폴더를 제외한 Git index export에서 assembleDebug + core:test + lintDebug 모두 성공 |
 | 실제 로컬 Clone | 첫 커밋 4a5fd0e를 `git clone --no-local`로 복제. JAVA_HOME/ANDROID_HOME만 지정해 APK + 24개 단위 테스트 + Lint 성공 (36초) |
 | 최종 코드 Clone | 코드 커밋 cfd0141로 fast-forward 후 같은 검사 재통과 (41초). local.properties 미포함 확인 |
@@ -19,7 +19,15 @@
 | Vehicle SDK 런타임 프로브 | **통과**. 실제 source=PLEOS, SOC=100.0%, 충전 스위치 OFF, GEAR_PARK, UX 허용 수신 |
 | Navi SDK 런타임 프로브 | **실패**. Navi Service 연결은 완료됐지만 30초 내 목적지 콜백 미수신. 실제 경유지 등록 성공은 미검증 |
 
-## 0.8.0 ROUTE 충전기 이용 현황 검증
+## 0.9.0 간결한 데모 경험 검증
+
+- 최종 :app:assembleDebug :app:assembleDebugAndroidTest :core:test :app:lintDebug 성공(49초), Lint0오류/기존12경고. 최초 새 코드의 모듈 간 smart-cast와 실제 출처 시험의 fixture 출처를 수정했다.
+- 기존39개+신규5개44개 전부 통과. 새 로딩2개는 실제 경과3초/캐시 적중 시 깜빡임 없음, 데모3개는 두 시간대/원클릭120XP/재시작 후 중복 방지, 실제 지역/개인 리스트, 여러 시드의 혼합 상태·11분 후 자동 갱신/의도적 미확인을 검증했다.
+- 새 단위4개와 기존 단위를 합친68개가 통과했다. 실제16/22시 시작·17/23시 종료 제외, Mock 시간 우회와 실제 출처 미우회, 지역3~11 분포·실제 XP 보존·개인32명도 검사한다.
+- 첫 전체 검사43/44에서 인트로의 Compose 테스트 시계가 실제 경과 시간을 앞당기는 문제를 발견했다. 실제 elapsedRealtime/Default dispatcher 대기로 통일한 뒤44/44 재통과했다. OS 모션 축소와 무관한 최소 시간이며 안전 제한·취소는 즉시 우선한다.
+- 카드/HOME/두 랭킹 화면을 `artifacts/demo-polish-v090/`에서 시각 검토하고 원본 DataStore 백업을 복원했다. APK0.9.0/code10이며 실제 SDK 종단 검증 결과와 구분한다. 항목별 [완료 체크리스트](DEMO_POLISH_CHECKLIST.md)를 따른다.
+
+## 0.8.0 ROUTE 충전기 이용 현황 검증 (이전 기록)
 
 - `:app:assembleDebug :app:assembleDebugAndroidTest :core:test :app:lintDebug` 성공(2분58초). Lint 오류0/기존 경고12. 첫 컴파일의 기존 Compose FlowRow 미지원 인자를 제거해 수정했다.
 - 새 단위7개: 정확히50% 경계·가용0/고장/점검 제외·미수신/미래/10분 경계·부분 갱신·중복/잘못된 재고·상태 변경 시각과 관측 시각 분리·혼합 커넥터·거리/여유/호환 순위.

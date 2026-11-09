@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gridguild.GridViewModel
 import com.gridguild.core.*
@@ -36,11 +37,17 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
     val safety by model.safety.collectAsStateWithLifecycle()
     val navi by model.navigation.collectAsStateWithLifecycle()
     val ready by model.ready.collectAsStateWithLifecycle()
+    val resources=LocalContext.current.resources
     val allowed by model.gameAllowed.collectAsStateWithLifecycle()
     val message by model.message.collectAsStateWithLifecycle()
     val tick by model.now.collectAsStateWithLifecycle()
     val now=System.currentTimeMillis().coerceAtLeast(tick)
     val platformAllowed by model.platformAllowed.collectAsStateWithLifecycle()
+    val introFinished=rememberIntroFinished(ready && platformAllowed && (allowed || game.districtId==null))
+    val unlocked=CityLevels.level(game.cityXp(game.districtId))
+    LaunchedEffect(ready,allowed,game.districtId,unlocked) {
+        if(ready && allowed && game.districtId!=null)preloadCityArt(resources,unlocked,unlocked)
+    }
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var controls by rememberSaveable { mutableStateOf(false) }
     var modeInfo by rememberSaveable { mutableStateOf(false) }
@@ -82,12 +89,13 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                 }
                 HorizontalDivider(color=Line)
                 if (controls && platformAllowed) ConnectionPanel(model,game,vehicle,safety,allowed)
-                if (!ready) Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
-                    CityGrowthLoading(Modifier.widthIn(max=700.dp),animate=allowed,label=message.ifBlank{"도시를 준비하고 있어요"})
+                if(!platformAllowed) Box(Modifier.fillMaxSize().padding(32.dp),contentAlignment=Alignment.Center) { Text("플랫폼 주차 UX 확인 대기 · 주행 중에는 게임을 이용할 수 없습니다.") }
+                else if(!ready) Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text("진행 상황 확인 중")}
+                else if(game.districtId!=null && !allowed)RestrictedScreen(safety,vehicle,game,model)
+                else if (!introFinished) Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
+                    CityGrowthLoading(Modifier.widthIn(max=700.dp),animate=allowed,label=message.ifBlank{"도시를 준비하고 있어요"},loop=false)
                 }
-                else if(!platformAllowed) Box(Modifier.fillMaxSize().padding(32.dp),contentAlignment=Alignment.Center) { Text("플랫폼 주차 UX 확인 대기 · 주행 중에는 게임을 이용할 수 없습니다.") }
                 else if(game.districtId==null) Onboarding(model)
-                else if(!allowed) RestrictedScreen(safety,vehicle,game,model)
                 else Row(Modifier.weight(1f)) {
                     if(wide) Column(Modifier.fillMaxHeight().width(130.dp).background(Paper.copy(alpha=.92f)).padding(12.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                         Spacer(Modifier.height(12.dp))
@@ -117,7 +125,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                     Text(if(game.mode==AppMode.MOCK)"데모 데이터 · 충전소·전력망·경쟁자는 샘플이며 XP는 위치 미인증 성과입니다." else "차량: Pleos SDK · 충전소·전력망·경쟁자: 데모 · XP는 위치 미인증 성과입니다.",fontSize=12.sp,color=Subtle)
                 }
             }
-            XpRewardHost(model.rewards,allowed,game.cityXp(game.districtId),
+            XpRewardHost(model.rewards,allowed && ready && introFinished,game.cityXp(game.districtId),
                 {model.game.value.cityXp(model.game.value.districtId)},
                 Modifier.align(Alignment.BottomEnd).padding(bottom=76.dp,start=20.dp,end=20.dp))
             if(modeInfo && platformAllowed) AlertDialog(onDismissRequest={modeInfo=false},
@@ -283,6 +291,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
     val connector by model.demoConnector.collectAsStateWithLifecycle()
     val compatible=if(g.mode==AppMode.MOCK)setOf(connector) else null
     var connectorDialog by remember{mutableStateOf(false)}
+    var stationOptions by rememberSaveable{mutableStateOf(false)}
     val availabilityNow=System.currentTimeMillis().coerceAtLeast(now)
     val listState=rememberLazyListState()
     LaunchedEffect(g.mission?.id) { if(g.mission!=null) listState.animateScrollToItem(0) }
@@ -296,25 +305,24 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
             NavigationControls(n,g.mode==AppMode.MOCK,model::refreshNavigation,model::reroute,model::changeDemoDestination,model::randomDemoDestination)
         } }
         item { Panel(Modifier.fillMaxWidth()) {
-            Text(if(recommendations.status==RecommendationStatus.HIGH_SOC)"충전 추천 중지" else "목적지 주변 충전소 · ${stations.size}곳",fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.testTag("nearbySummary"))
+            Row(verticalAlignment=Alignment.CenterVertically) {
+                Text(if(recommendations.status==RecommendationStatus.HIGH_SOC)"충전 추천 중지" else "목적지 주변 충전소 · ${stations.size}곳",fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f).testTag("nearbySummary"))
+                IconButton(onClick=model::refreshChargerAvailability,modifier=Modifier.testTag("refreshAvailability")){Icon(Icons.Outlined.Refresh,"데모 상태 새로고침")}
+                IconButton(onClick={stationOptions=!stationOptions},modifier=Modifier.testTag("availabilitySettings")){Icon(Icons.Outlined.Tune,"추천 안내·데모 설정")}
+            }
             Text(when(recommendations.status) {
-                RecommendationStatus.READY -> "반경 5 km 샘플 · 여유·거리·커넥터 호환성을 함께 고려합니다."
+                RecommendationStatus.READY -> "여유와 거리를 고려한 데모 추천"
                 RecommendationStatus.NO_DESTINATION -> "목적지 좌표를 확인하면 주변 후보가 표시됩니다."
                 RecommendationStatus.HIGH_SOC -> "SOC 90% 이상으로 추가 충전을 권장하지 않습니다."
                 RecommendationStatus.NO_NEARBY -> if(g.mode==AppMode.MOCK)"목적지 반경 5 km 안에 샘플 충전소가 없습니다. 다른 테스트 목적지를 선택해 보세요."
                     else "목적지 반경 5 km 안에 샘플 충전소가 없습니다. 실제 시설의 부재를 뜻하지 않습니다."
-            },fontSize=13.sp,color=Subtle,modifier=Modifier.testTag("nearbyReason"))
-            FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                AvailabilityStatus.entries.forEach{status->
-                    val count=recommendations.nearby.count{it.availability.status==status}
-                    Text("${status.label} $count",fontSize=12.sp,color=Subtle)
-                }
-            }
-            Text("혼잡은 사용 현황의 간이 표시로 대기 차량·시간과 다릅니다. 도착 전 상태가 바뀔 수 있어요.",fontSize=12.sp,color=Subtle)
-            Text("MOCK 충전기 현황 · 경로 이탈 거리 미연동 · 목적지 직선거리로 비교",fontSize=12.sp,color=Subtle)
-            FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick=model::refreshChargerAvailability,modifier=Modifier.testTag("refreshAvailability")){Text("상태 새로고침 (MOCK)")}
+            },fontSize=15.sp,color=Subtle,modifier=Modifier.testTag("nearbyReason"))
+            if(stationOptions) {
+                Text("데모 현황은 도착 전 바뀔 수 있어요. 혼잡은 대기시간이 아닌 이용 비율입니다. 경로 이탈 거리는 미연동이며 목적지 직선거리를 표시합니다.",fontSize=14.sp,color=Subtle)
+                FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 if(g.mode==AppMode.MOCK)TextButton(onClick={connectorDialog=true},modifier=Modifier.testTag("demoConnector")){Text("내 커넥터 · ${connector.label} (테스트)")}
+                if(g.mode==AppMode.MOCK)TextButton(onClick=model::shuffleDemoAvailability,modifier=Modifier.testTag("shuffleAvailability")){Text("상태 섞기")}
+                }
             }
         } }
         g.mission?.let { m -> item { Panel(Modifier.fillMaxWidth().testTag("activeMission")) {
@@ -352,13 +360,11 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                     Column(Modifier.weight(1f)) {
                         Text("${stations.indexOf(station)+1}. ${station.name}",fontSize=20.sp,fontWeight=FontWeight.Bold)
                         Text("${Busan.find(station.districtId)?.name} · "+if(station.hourStart==0 && station.hourEnd==24)"미션 상시 참여" else "미션 ${station.windowLabel}",color=Subtle)
-                        Text(station.connectors.joinToString(" / "){it.label},fontSize=13.sp,color=Subtle)
-                        Text(if(candidate.detourKm!=null)"경로 이탈 %.1f km".format(java.util.Locale.KOREA,candidate.detourKm) else "경로 이탈 미확인 · 목적지 직선 %.1f km".format(java.util.Locale.KOREA,candidate.distanceKm),fontSize=13.sp,color=Green)
+                        Text(station.connectors.joinToString(" / "){it.label}+" · "+if(candidate.detourKm!=null)"이탈 %.1f km".format(java.util.Locale.KOREA,candidate.detourKm) else "목적지 직선 %.1f km".format(java.util.Locale.KOREA,candidate.distanceKm),fontSize=14.sp,color=Subtle)
                     }
                     BadgeText("+${station.xp} 데모 XP",Gold)
                 }
-                ChargerAvailabilityInfo(candidate,availabilityNow,g.mode==AppMode.MOCK){scenario->model.setDemoAvailability(station.id,scenario)}
-                Text("MOCK 전력망 · 이용 현황은 모의 데이터",fontSize=12.sp,color=Subtle)
+                ChargerAvailabilityInfo(candidate,g.mode==AppMode.MOCK){scenario->model.setDemoAvailability(station.id,scenario)}
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     Button(onClick={model.startMission(station)},enabled=canStart,shape=RoundedCornerShape(14.dp),modifier=Modifier.width(200.dp).heightIn(min=56.dp).testTag("mission-${station.id}")) {
                         if(starting==station.id) { CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(8.dp)) }
@@ -367,15 +373,16 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                     OutlinedButton(onClick={model.addWaypoint(station)},enabled=!n.pending,modifier=Modifier.heightIn(min=52.dp).testTag("waypoint-${station.id}")) { Text(if(g.mode==AppMode.MOCK) "경유지 추가 (MOCK)" else "샘플 좌표 경유지 요청") }
                     TextButton(onClick={model.setDestination(station)},enabled=!n.pending,modifier=Modifier.testTag("destination-${station.id}")){Text(if(g.mode==AppMode.MOCK)"목적지로 설정 (테스트)" else "샘플 좌표로 내비 목적지 요청")}
                 }
-                Text(when {
+                val footnote=when {
                     done -> "오늘의 보상은 이미 받았어요. 다음 충전소에 참여해 보세요."
                     g.mission?.stationId==station.id -> "위의 진행 카드에서 목표 SOC와 자동 완료 조건을 확인하세요."
                     g.mission!=null -> "진행 중인 미션을 완료하거나 취소한 후 시작할 수 있어요."
                     !hasCharger -> "이용 가능한 호환 충전기가 있는 다른 후보를 확인하세요."
                     !reading.fresh || !correctSource -> "차량 정보를 기다리고 있어요. 데모에서는 상단 조작 메뉴를 사용할 수 있어요."
                     !station.inWindow(now) -> "보상 미션은 ${station.windowLabel}에 참여할 수 있어요. 충전소가 닫혔다는 뜻은 아닙니다."
-                    else -> "충전 ON 상태에서 SOC가 2%p 증가하면 자동으로 완료됩니다."
-                },fontSize=13.sp,color=Subtle,modifier=Modifier.heightIn(min=24.dp))
+                    else -> ""
+                }
+                if(footnote.isNotBlank())Text(footnote,fontSize=15.sp,color=Subtle)
             }
         }
         if(n.hasDestination && recommendations.status!=RecommendationStatus.HIGH_SOC) item {
@@ -397,19 +404,19 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
     var cities by rememberSaveable { mutableStateOf(false) }
     var monthly by rememberSaveable { mutableStateOf(true) }
     val sorted=if(cities)Rankings.cities(g,now,monthly) else Rankings.personal(g,now,monthly)
-    LazyColumn(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        item { Section("함께 만드는 순위","${GameState.season(now)} 시즌 · 경쟁자와 지역 기본 점수 MOCK · 내 기여는 로컬 데모 XP") }
+    LazyColumn(verticalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.testTag("rankingList")) {
+        item { Section("함께 만드는 순위","${GameState.season(now)} 시즌 · 샘플 랭킹 · 내 성과 반영") }
         item { Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             FilterChip(selected=!cities,onClick={cities=false},label={Text("개인 랭킹")})
             FilterChip(selected=cities,onClick={cities=true},label={Text("지역 랭킹")})
             FilterChip(selected=monthly,onClick={monthly=!monthly},label={Text(if(monthly) "월간 시즌" else "누적 성과")})
         } }
-        item { BadgeText("내 순위 ${sorted.indexOfFirst{it.mine}+1}위 · 실제 온라인 순위 아님") }
+        item { BadgeText("내 순위 ${sorted.indexOfFirst{it.mine}+1}위 · 데모") }
         items(sorted.size) { index -> val row=sorted[index]
             Surface(color=if(row.mine)Pale else Color.White,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(22.dp),verticalAlignment=Alignment.CenterVertically) {
                     Text("%02d".format(index+1),fontSize=24.sp,fontWeight=FontWeight.Bold,color=Blue,modifier=Modifier.width(60.dp))
-                    Column(Modifier.weight(1f)) { Text(row.name+(if(row.mine)" · 내 소속" else ""),fontWeight=FontWeight.Bold,fontSize=18.sp);if(cities)Text("Lv.${CityLevels.level(row.xp)} · 모의 공동 점수",fontSize=14.sp,color=Subtle) }
+                    Column(Modifier.weight(1f)) { Text(row.name+(if(row.mine && cities)" · 내 소속" else ""),fontWeight=FontWeight.Bold,fontSize=18.sp);if(cities)Text("Lv.${CityLevels.level(row.xp)} · 모의 공동 점수",fontSize=16.sp,color=Subtle) }
                     Text("${row.xp} XP",fontSize=22.sp,fontWeight=FontWeight.Bold)
                 }
             }

@@ -18,10 +18,10 @@ data class AvailabilitySummary(
     val compatibleAvailable: Int?,val complete: Boolean,val updatedAt: Long?,val source: AvailabilitySource?,
 ) {
     val countLabel get()=when {
-        total==null -> "충전기 수 정보 없음"
+        total==null -> "수량 미확인"
         complete -> "${total}기 중 ${available}기 이용 가능"
-        available>0 -> "${total}기 중 ${available}기 이용 가능 확인 · 일부 미확인"
-        else -> "${total}기 · 이용 가능 수 확인 필요"
+        available>0 -> "${total}기 중 ${available}기 확인 · 일부 미확인"
+        else -> "총 ${total}기"
     }
 }
 

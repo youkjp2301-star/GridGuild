@@ -29,6 +29,8 @@ import com.gridguild.R
 import com.gridguild.core.CityLevels
 import com.gridguild.core.XpVisualEvent
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlin.math.roundToInt
 
@@ -72,14 +74,25 @@ import kotlin.math.roundToInt
 }
 
 /** Four dedicated construction keyframes. Cosmetic assembly, never a preview of a locked level. */
-@Composable internal fun CityGrowthLoading(modifier: Modifier=Modifier,animate: Boolean=true,label: String="도시를 준비하고 있어요") {
+const val minimumLoadingMs=3000L
+internal suspend fun holdLoadingMinimum(started: Long) = withContext(Dispatchers.Default) {
+    // Elapsed real time, independent of animation scale and Compose's virtual test clock.
+    val remaining=minimumLoadingMs-(android.os.SystemClock.elapsedRealtime()-started)
+    if(remaining>0)delay(remaining)
+}
+@Composable internal fun rememberIntroFinished(enabled: Boolean=true): Boolean {
+    var done by remember{mutableStateOf(false)}
+    LaunchedEffect(enabled){if(enabled && !done){holdLoadingMinimum(android.os.SystemClock.elapsedRealtime());done=true}}
+    return done
+}
+@Composable internal fun CityGrowthLoading(modifier: Modifier=Modifier,animate: Boolean=true,label: String="도시를 준비하고 있어요",loop: Boolean=true,caption: Boolean=true) {
     val atlas=ImageBitmap.imageResource(R.drawable.city_loading_v2)
     var phase by remember{mutableIntStateOf(0)}
     val moving=animate && motionEnabled()
-    LaunchedEffect(moving) {
-        if(moving)while(true){delay(620);phase=(phase+1)%4} else phase=3
+    LaunchedEffect(moving,loop) {
+        if(moving)while(true){delay(650);if(phase<3)phase++ else if(loop)phase=0 else break} else phase=3
     }
-    Column(modifier.padding(20.dp).testTag("cityLoading"),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(16.dp)) {
+    Column(modifier.padding(if(caption)20.dp else 0.dp).testTag("cityLoading"),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(16.dp)) {
         Crossfade(phase,animationSpec=tween(if(moving)260 else 0),label="constructionFrame") { frame ->
             Canvas(Modifier.fillMaxWidth().aspectRatio(2f).semantics{contentDescription="장식용 도시 조립 ${frame+1}/4"}) {
                 val w=atlas.width/2;val h=atlas.height/2
@@ -87,8 +100,8 @@ import kotlin.math.roundToInt
                     dstSize=IntSize(size.width.roundToInt(),size.height.roundToInt()),filterQuality=FilterQuality.High)
             }
         }
-        Text(label,color=Ink,fontWeight=FontWeight.SemiBold,fontSize=20.sp)
-        Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
+        if(caption)Text(label,color=Ink,fontWeight=FontWeight.SemiBold,fontSize=20.sp)
+        if(caption)Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
             repeat(4){i->Box(Modifier.size(if(i==phase)9.dp else 6.dp).background(if(i==phase)Green else Line,RoundedCornerShape(4.dp)))}
         }
     }

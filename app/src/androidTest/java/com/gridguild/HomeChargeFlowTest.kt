@@ -74,7 +74,7 @@ class HomeChargeFlowTest {
         register()
         ui.activityRule.scenario.onActivity{androidx.lifecycle.ViewModelProvider(it)[GridViewModel::class.java].mockSoc(20f)}
         ui.waitUntil(8_000){ui.onAllNodesWithText("20%").fetchSemanticsNodes().isNotEmpty()}
-        ui.onNodeWithTag("homeRecommendation").assertTextContains("바로 충전",substring=true)
+        ui.onNodeWithTag("homeChargePriority").assertTextContains("충전을 미루지",substring=true)
         ui.onNodeWithTag("homeJoin").performScrollTo().assertIsEnabled()
         ui.activityRule.scenario.onActivity{androidx.lifecycle.ViewModelProvider(it)[GridViewModel::class.java].mockSoc(90f)}
         ui.waitUntil(8_000){ui.onAllNodesWithText("90%").fetchSemanticsNodes().isNotEmpty()}

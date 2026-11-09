@@ -55,6 +55,7 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { while (isActive) {
             now.value=System.currentTimeMillis()
             if(automotive && foreground) platformAllowed.value=platform?.readAllowed()==true
+            if(foreground)availabilityRepository.refreshIfDue()
             delay(500)
         } }
     }
@@ -146,6 +147,29 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
             })startingMission.value=null
         }
     }
+    fun simulateHomeCharge() = action {
+        if(game.value.mode!=AppMode.MOCK || vehicleRepo !is MockVehicleRepository)return@action
+        if(!startingMission.compareAndSet(null,HomeChargeEngine.stationId))return@action
+        try {
+            val started=mutate { state ->
+                require(state.mode==AppMode.MOCK && platformAllowed.value && safety.value.allowsGame(System.currentTimeMillis())){"데모 주차 상태를 확인하세요"}
+                val current=state.mission
+                require(vehicle.value.usable(System.currentTimeMillis()) && vehicle.value.source==DataSource.MOCK && (vehicle.value.soc ?: 100f)<90f){"최신 데모 배터리 상태를 확인하세요"}
+                require(current==null || current.kind==MissionKind.HOME){"ROUTE 미션을 먼저 완료하세요"}
+                if(state.mission==null)HomeChargeEngine.start(state,vehicle.value,System.currentTimeMillis(),"home-charge:${UUID.randomUUID()}") else state
+            }
+            if(started) {
+                val persisted=store.state.first()
+                val mission=persisted.mission?.takeIf{it.kind==MissionKind.HOME && it.source==DataSource.MOCK} ?: return@action
+                val target=maxOf(vehicle.value.soc ?: 0f,(mission.windowBaselineSoc ?: mission.baselineSoc)+mission.requiredGain)
+                require(target<=90f && persisted.homeCharge.targetSoc?.let{target<=it}!=false){"목표 배터리를 초과하지 않는 상태에서 테스트하세요"}
+                delay(25)
+                if(game.value.mode==AppMode.MOCK && platformAllowed.value && safety.value.allowsGame(System.currentTimeMillis()))
+                    (vehicleRepo as? MockVehicleRepository)?.set(soc=target,charge=ChargeSignal.ON)
+            }
+        } catch(e: CancellationException){throw e} catch(e: Exception){message.value=e.message ?: "충전 테스트 실패"}
+        finally {startingMission.value=null}
+    }
     fun cancelMission() = action { mutate { it.copy(mission=null) } }
     private fun navigationAction(request: (NavigationRepository)->Unit) = action {
         val repository=navRepo
@@ -166,6 +190,7 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
         if(game.value.mode==AppMode.MOCK)availabilityRepository.setScenario(stationId,scenario)
     }
     fun setDemoConnector(connector: ChargerConnector) = action { if(game.value.mode==AppMode.MOCK)demoConnector.value=connector }
+    fun shuffleDemoAvailability() = action { if(game.value.mode==AppMode.MOCK)availabilityRepository.shuffle(keepFirstUsable=false) }
     fun refreshChargerAvailability() = action {
         availabilityRepository.refresh()
         message.value="MOCK 충전기 현황을 다시 불러왔어요. 실제 충전소 조회는 아닙니다."

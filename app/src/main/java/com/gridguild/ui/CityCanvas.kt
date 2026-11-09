@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import android.graphics.BitmapFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,24 +45,23 @@ import kotlin.math.roundToInt
         return
     }
     val stage=CityStage.at(level)
-    val resource=when(stage.era) {
-        0 -> R.drawable.city_medieval_v4
-        1 -> R.drawable.city_modern_v4
-        else -> R.drawable.city_future_v4
-    }
+    val resource=cityArtResource(stage.era)
     val context=LocalContext.current
     var retry by remember(resource){mutableIntStateOf(0)}
-    val loaded by produceState<Pair<Int,Result<ImageBitmap>>?>(null,resource,retry) {
-        value=withContext(Dispatchers.IO){resource to runCatching{CityArtCache.load(context.resources,resource)}}
+    val cached=remember(resource){CityArtCache.peek(resource)}
+    val loaded by produceState<Pair<Int,Result<ImageBitmap>>?>(cached?.let{resource to Result.success(it)},resource,retry) {
+        val started=android.os.SystemClock.elapsedRealtime()
+        val result=withContext(Dispatchers.IO){runCatching{CityArtCache.load(context.resources,resource)}}
+        if(cached==null && result.isSuccess)holdLoadingMinimum(started)
+        value=resource to result
     }
-    // produceState retains its last value across key changes. Never render that previous era
-    // with the new level's frame coordinates (especially when an XP reset lowers the unlock).
+    // Keyed result prevents an older era from being rendered after an XP reset.
     val art=loaded?.takeIf{it.first==resource}?.second
-    val atlas=art?.getOrNull()
+    val atlas=cached ?: art?.getOrNull()
     if(atlas==null) {
         if(art?.isFailure==true) Box(modifier,contentAlignment=Alignment.Center) {
             TextButton(onClick={retry++}){Text("도시 이미지 다시 불러오기")}
-        } else CityGrowthLoading(modifier,label="도시 풍경 불러오는 중")
+        } else CityGrowthLoading(modifier,label="도시 풍경 불러오는 중",loop=false,caption=false)
         return
     }
     Canvas(modifier.clip(RoundedCornerShape(20.dp)).background(Bg).semantics {
@@ -78,11 +78,23 @@ import kotlin.math.roundToInt
     }
 }
 
-/** Bundled bitmap decoding is the loading source; no decorative minimum wait is imposed. */
+private fun cityArtResource(era: Int)=when(era) {
+        0 -> R.drawable.city_medieval_v4
+        1 -> R.drawable.city_modern_v4
+        else -> R.drawable.city_future_v4
+    }
+/** Cold scenes honor the user's minimum duration; warm cache hits do not flash a loader. */
 private object CityArtCache {
     private val images=android.util.LruCache<Int,ImageBitmap>(3)
+    @Synchronized fun peek(id: Int): ImageBitmap? =images.get(id)
+    @Synchronized fun clear(){images.evictAll()}
     @Synchronized fun load(resources: android.content.res.Resources,id: Int): ImageBitmap =
         images.get(id) ?: requireNotNull(BitmapFactory.decodeResource(resources,id)).asImageBitmap().also{images.put(id,it)}
+}
+/** Deterministic cold/warm rendering checks, without touching the saved game. */
+internal fun clearCityArtMemoryCache(){CityArtCache.clear()}
+internal suspend fun preloadCityArt(resources: android.content.res.Resources,level: Int,unlockedThrough: Int) {
+    if(CityUnlocks.canView(level,unlockedThrough))withContext(Dispatchers.IO){runCatching{CityArtCache.load(resources,cityArtResource(CityStage.at(level).era))}}
 }
 
 /** Original geometric placeholder. It never reads or blurs an unreleased city image. */

@@ -8,7 +8,8 @@ class HomeChargeTest {
     private val time=Instant.parse("2026-11-05T13:00:00Z").toEpochMilli() // 22:00 Seoul
     private fun vehicle(soc: Float=42f,at: Long=time,charge: ChargeSignal=ChargeSignal.ON,source: DataSource=DataSource.MOCK)=VehicleState(soc,charge,source,at)
     private fun initial(preferences: HomeChargePreferences=HomeChargePreferences("우리 집"))=GameState(districtId="sasang",homeCharge=preferences)
-    private fun start(preferences: HomeChargePreferences=HomeChargePreferences("우리 집"))=HomeChargeEngine.start(initial(preferences),vehicle(),time,"home:test")
+    private fun start(preferences: HomeChargePreferences=HomeChargePreferences("우리 집"),real: Boolean=false,at: Long=time)=
+        HomeChargeEngine.start(initial(preferences).copy(mode=if(real)AppMode.PLEOS else AppMode.MOCK),vehicle(at=at,source=if(real)DataSource.PLEOS else DataSource.MOCK),at,"home:test")
     @Test fun noDepartureLowBatteryAndUnmetTargetNeverRecommendWaiting() {
         assertEquals(HomeAdvice.UNKNOWN_DEPARTURE,HomeChargePolicy.plan(HomeChargePreferences("집"),42f,time).advice)
         assertEquals(HomeAdvice.LOW_BATTERY,HomeChargePolicy.plan(HomeChargePreferences("집",departureMinutes=480),20f,time).advice)
@@ -16,11 +17,13 @@ class HomeChargeTest {
         assertEquals(HomeAdvice.DEPARTURE_SOON,HomeChargePolicy.plan(HomeChargePreferences("집",departureMinutes=60),42f,time).advice)
         assertEquals(HomeAdvice.UNKNOWN_BATTERY,HomeChargePolicy.plan(HomeChargePreferences("집"),null,time).advice)
     }
-    @Test fun overnightWindowAndDepartureBufferUseActualSeoulDates() {
+    @Test fun twoDailyWindowsAndDepartureBufferUseActualSeoulDates() {
         val plan=HomeChargePolicy.plan(HomeChargePreferences("집",departureMinutes=480),42f,time)
-        assertTrue(plan.night);assertEquals(time+3_600_000,plan.start);assertEquals(time+5*3_600_000,plan.end)
-        assertTrue(HomeChargePolicy.plan(HomeChargePreferences("집",departureMinutes=360),42f,time).night)
-        assertFalse(HomeChargePolicy.plan(HomeChargePreferences("집",departureMinutes=359),42f,time).night)
+        assertTrue(plan.scheduled);assertEquals(time,plan.start);assertEquals(time+3_600_000,plan.end)
+        assertTrue(HomeChargePolicy.plan(HomeChargePreferences("집",departureMinutes=120),42f,time).scheduled)
+        assertFalse(HomeChargePolicy.plan(HomeChargePreferences("집",departureMinutes=119),42f,time).scheduled)
+        val afternoon=time-6*3_600_000
+        assertEquals(afternoon,HomeChargePolicy.plan(HomeChargePreferences("집",departureMinutes=23*60),42f,afternoon).start)
     }
     @Test fun aSingleJoinAutomaticallyPaysPersonalCityAndRankOnce() {
         val before=start()
@@ -30,14 +33,14 @@ class HomeChargeTest {
         assertEquals(after,MissionEngine.observe(after,vehicle(46f,time+2000),time+2000))
         assertThrows(IllegalArgumentException::class.java){HomeChargeEngine.start(after,vehicle(44f,time+2000),time+2000,"home:again")}
     }
-    @Test fun preWindowGainsNeverBecomeNightRewardsAndMidnightIsSupported() {
-        var state=start(HomeChargePreferences("家",departureMinutes=480))
+    @Test fun realSourcePreWindowGainsNeverBecomeScheduledRewards() {
+        var state=start(HomeChargePreferences("家",departureMinutes=480),real=true,at=time-3_600_000)
         val from=state.mission!!.windowStart!!
-        state=MissionEngine.observe(state,vehicle(60f,from-1000),from-1000)
+        state=MissionEngine.observe(state,vehicle(60f,from-1000,source=DataSource.PLEOS),from-1000)
         assertEquals(0,state.xp);assertNull(state.mission!!.windowBaselineSoc)
-        state=MissionEngine.observe(state,vehicle(60f,from),from)
+        state=MissionEngine.observe(state,vehicle(60f,from,source=DataSource.PLEOS),from)
         assertEquals(0,state.xp);assertEquals(60f,state.mission!!.windowBaselineSoc!!,0f)
-        state=MissionEngine.observe(state,vehicle(62f,from+3_600_000+1000),from+3_600_000+1000)
+        state=MissionEngine.observe(state,vehicle(62f,from+1_800_000,source=DataSource.PLEOS),from+1_800_000)
         assertEquals(120,state.xp);assertNull(state.mission)
     }
     @Test fun staleFutureOffUnknownWrongSourceAndReorderedSamplesCannotPay() {
@@ -50,16 +53,17 @@ class HomeChargeTest {
         assertEquals(0,MissionEngine.observe(original,vehicle(44f,time+1000),time+12_000).xp)
     }
     @Test fun lowBatteryAfterEnrollmentFallsBackToNowWithoutImmediateReward() {
-        val waiting=start(HomeChargePreferences("집",departureMinutes=480))
-        val changed=MissionEngine.observe(waiting,vehicle(20f,time+1000),time+1000)
-        assertEquals(time+1000,changed.mission!!.windowStart);assertEquals(20f,changed.mission!!.windowBaselineSoc!!,0f);assertEquals(0,changed.xp)
-        assertEquals(120,MissionEngine.observe(changed,vehicle(22f,time+2000),time+2000).xp)
+        val before=time-3_600_000
+        val waiting=start(HomeChargePreferences("집",departureMinutes=480),real=true,at=before)
+        val changed=MissionEngine.observe(waiting,vehicle(20f,before+1000,source=DataSource.PLEOS),before+1000)
+        assertEquals(before+1000,changed.mission!!.windowStart);assertEquals(20f,changed.mission!!.windowBaselineSoc!!,0f);assertEquals(0,changed.xp)
+        assertEquals(120,MissionEngine.observe(changed,vehicle(22f,before+2000,source=DataSource.PLEOS),before+2000).xp)
     }
     @Test fun expiredNightEndsWithoutRewardAndBothKindsShareOneActiveSlot() {
-        val waiting=start(HomeChargePreferences("집",departureMinutes=480))
+        val waiting=start(HomeChargePreferences("집",departureMinutes=480),real=true,at=time-3_600_000)
         val end=waiting.mission!!.windowEnd!!
-        assertNull(MissionEngine.observe(waiting,vehicle(80f,end),end).mission)
-        assertEquals(0,MissionEngine.observe(waiting,vehicle(80f,end),end).xp)
+        assertNull(MissionEngine.observe(waiting,vehicle(80f,end,source=DataSource.PLEOS),end).mission)
+        assertEquals(0,MissionEngine.observe(waiting,vehicle(80f,end,source=DataSource.PLEOS),end).xp)
         assertThrows(IllegalArgumentException::class.java){MissionEngine.start(waiting,SampleData.stations.first(),vehicle(),time,"sasang-river:new")}
         assertThrows(IllegalArgumentException::class.java){HomeChargeEngine.start(waiting,vehicle(),time,"home:2")}
     }
@@ -80,5 +84,24 @@ class HomeChargeTest {
         state=MissionEngine.observe(state,vehicle(44f,time+11_000),time+11_000)
         assertEquals(510,state.xp);assertEquals(1,state.history.count{it.kind=="DAILY"})
         assertEquals(6,SampleData.stations.size);assertEquals(3,SampleData.dailyBonusStations.size)
+    }
+    @Test fun mockChargingOutsideBothSlotsUsesSameLedgerButRealSourceDoesNotSkipTime() {
+        val outside=time-9*3_600_000 // 13:00 Korea
+        val preferences=HomeChargePreferences("집",departureMinutes=8*60)
+        val mock=start(preferences,at=outside)
+        assertEquals(120,HomeChargeEngine.observe(mock,vehicle(44f,outside+1000),outside+1000).xp)
+        val real=start(preferences,real=true,at=outside)
+        assertEquals(0,HomeChargeEngine.observe(real,vehicle(44f,outside+1000,source=DataSource.PLEOS),outside+1000).xp)
+        assertNull(real.mission!!.windowBaselineSoc)
+        assertThrows(IllegalArgumentException::class.java){HomeChargeEngine.start(initial(preferences).copy(mode=AppMode.PLEOS),vehicle(at=outside),outside,"bad-source")}
+    }
+    @Test fun realWindowEndIsExclusiveForBothAfternoonAndEvening() {
+        for((hour,departure) in listOf(16 to 23*60,22 to 8*60)) {
+            val from=time+(hour-22)*3_600_000L
+            val waiting=start(HomeChargePreferences("집",departureMinutes=departure),real=true,at=from-3_600_000)
+            val baseline=HomeChargeEngine.observe(waiting,vehicle(42f,from,source=DataSource.PLEOS),from)
+            val ended=HomeChargeEngine.observe(baseline,vehicle(44f,from+3_600_000,source=DataSource.PLEOS),from+3_600_000)
+            assertNull(ended.mission);assertEquals(0,ended.xp)
+        }
     }
 }

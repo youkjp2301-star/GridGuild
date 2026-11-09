@@ -48,18 +48,18 @@ class ChargingAvailabilityFlowTest {
             Triple(DemoAvailabilityScenario.FREE,"여유","5기 중 3기 이용 가능"),
             Triple(DemoAvailabilityScenario.BUSY,"혼잡","5기 중 1기 이용 가능"),
             Triple(DemoAvailabilityScenario.NONE,"이용 가능 없음","5기 중 0기 이용 가능"),
-            Triple(DemoAvailabilityScenario.UNKNOWN,"정보 없음","5기 · 이용 가능 수 확인 필요"))) {
+            Triple(DemoAvailabilityScenario.UNKNOWN,"정보 없음","총 5기"))) {
             choose(scenario);show("availability-sasang-river")
             ui.onNodeWithTag("availability-sasang-river").assertTextContains(label)
             ui.onNodeWithTag("chargerCount-sasang-river").assertTextContains(count)
-            ui.onNodeWithTag("availabilityTime-sasang-river").assertTextContains("MOCK",substring=true)
+            ui.onNodeWithTag("availabilityTime-sasang-river").assertDoesNotExist()
             picture(scenario.name.lowercase())
         }
         choose(DemoAvailabilityScenario.STALE);show("availability-sasang-river")
         ui.onNodeWithTag("availability-sasang-river").assertTextContains("정보 없음")
-        ui.onNodeWithTag("availabilityTime-sasang-river").assertTextContains("갱신 지연",substring=true)
+        ui.onNodeWithTag("availabilityTime-sasang-river").assertDoesNotExist()
         choose(DemoAvailabilityScenario.MISSING);show("chargerCount-sasang-river")
-        ui.onNodeWithTag("chargerCount-sasang-river").assertTextContains("충전기 수 정보 없음")
+        ui.onNodeWithTag("chargerCount-sasang-river").assertTextContains("수량 미확인")
         assertEquals(0,state().xp)
     }
     @Test fun noSlotsBlocksNewMissionButNeverCancelsAnExistingMissionOrAward() {
@@ -81,6 +81,7 @@ class ChargingAvailabilityFlowTest {
         assertNull(state().mission)
     }
     @Test fun connectorMismatchAndDemoRefreshAreExplicitWithoutChangingNaviContract() {
+        show("availabilitySettings");ui.onNodeWithTag("availabilitySettings").performClick()
         show("demoConnector");ui.onNodeWithTag("demoConnector").performClick()
         ui.onNodeWithTag("connector-AC_TYPE1").performClick()
         show("compatibility-sasang-river")

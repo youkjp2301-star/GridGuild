@@ -28,6 +28,10 @@ import com.gridguild.core.*
     val busy by model.startingMission.collectAsState()
     val correctSource=v.source==if(g.mode==AppMode.MOCK)DataSource.MOCK else DataSource.PLEOS
     val withinTarget=preferences.targetSoc?.let{target->v.soc?.let{it+2f<=target}}!=false
+    val testWithinTarget=active?.let{mission->
+        val goal=maxOf(v.soc ?: 100f,(mission.windowBaselineSoc ?: mission.baselineSoc)+mission.requiredGain)
+        goal<=90f && preferences.targetSoc?.let{goal<=it}!=false
+    } ?: withinTarget
     val eligible=reading.fresh && correctSource && withinTarget && v.soc?.let{it<90f}==true && g.mission==null && !done && busy==null
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(18.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically) {
@@ -42,16 +46,13 @@ import com.gridguild.core.*
             Text("현재 차량 배터리",fontSize=14.sp,color=Subtle)
             Text("${v.soc?.toInt()?.toString() ?: "—"}%",fontSize=48.sp,fontWeight=FontWeight.Bold,color=Ink,modifier=Modifier.testTag("homeSoc"))
             HorizontalDivider(color=Line,modifier=Modifier.padding(vertical=6.dp))
-            Text("오늘의 추천 충전 시간",fontSize=14.sp,color=Subtle)
-            val night=active?.let{(it.windowEnd ?: 0)-(it.windowStart ?: 0)==4*60*60*1000L} ?: plan.night
-            Text(if(night)"밤 11:00 ~ 새벽 3:00" else "필요할 때 바로 충전",fontSize=26.sp,fontWeight=FontWeight.Bold,color=Ink,modifier=Modifier.testTag("homeRecommendation"))
-            if(!night && active==null) Text(when(plan.advice) {
-                HomeAdvice.LOW_BATTERY->"배터리가 부족해 충전을 미루지 않는 게 좋아요."
-                HomeAdvice.UNKNOWN_DEPARTURE->"출발 시간을 몰라 충전 지연을 권하지 않아요."
-                HomeAdvice.BELOW_TARGET->"목표 배터리를 고려해 충전을 우선해 주세요."
-                HomeAdvice.DEPARTURE_SOON->"출발 전에 여유 있게 충전해 주세요."
-                else->"차량 정보를 확인하고 평소처럼 충전해 주세요."
-            },fontSize=13.sp,color=Subtle)
+            Text("추천 충전 시간 · 모의 데이터",fontSize=16.sp,color=Subtle)
+            Column(Modifier.testTag("homeRecommendation"),verticalArrangement=Arrangement.spacedBy(7.dp)) {
+                Text("16:00 – 17:00",fontSize=28.sp,fontWeight=FontWeight.SemiBold,color=Ink)
+                Text("22:00 – 23:00",fontSize=28.sp,fontWeight=FontWeight.SemiBold,color=Ink)
+            }
+            if((v.soc ?: 100f)<30f || (g.mode==AppMode.PLEOS && !plan.scheduled))
+                Text("충전을 미루지 말고 배터리와 출발 일정을 우선하세요.",fontSize=16.sp,color=Green,modifier=Modifier.testTag("homeChargePriority"))
             Surface(color=SoftGreen,shape=RoundedCornerShape(12.dp)) {
                 Text(if((v.soc ?: 0f)>=90f)"추가 충전을 권하지 않아요" else if(!withinTarget)"보상보다 목표 SOC를 우선해 주세요" else "조건 달성 시 +120 데모 XP",Modifier.padding(14.dp),color=Green,fontSize=20.sp,fontWeight=FontWeight.SemiBold)
             }
@@ -71,10 +72,12 @@ import com.gridguild.core.*
                     else->"충전 미션 참여하기"
                 })
             }
-            Text(if(active!=null)"평소처럼 충전하세요. 충전 ON·SOC 2%p 상승을 자동 확인합니다." else "참여 후 충전 ON·SOC 2%p 상승 시 자동 완료됩니다.",fontSize=13.sp,color=Subtle)
+            if(g.mode==AppMode.MOCK && preferences.chargerName!=null)OutlinedButton(onClick=model::simulateHomeCharge,
+                enabled=reading.fresh && correctSource && testWithinTarget && (v.soc ?: 100f)<90f && !done && busy==null && (g.mission==null || active!=null),
+                modifier=Modifier.fillMaxWidth().heightIn(min=52.dp).testTag("homeSimulate")) {Text("충전 테스트 · +120 XP")}
+            Text(if(g.mode==AppMode.MOCK)"테스트는 추천 시간 충전으로 자동 판정해요." else "충전 ON·SOC 2%p 상승을 자동 확인합니다.",fontSize=15.sp,color=Subtle)
         }
-        Text("추천 시간은 예시용 모의 데이터입니다. 앱은 충전 시작을 제어하지 않습니다.",fontSize=12.sp,color=Subtle)
-        Text("충전 장소·전력망 기여 미인증 데모 보상",fontSize=12.sp,color=Subtle)
+        Text("모의 추천 · 충전 시작은 직접 조절합니다.",fontSize=15.sp,color=Subtle)
         if(active!=null) TextButton(onClick=model::cancelMission,modifier=Modifier.testTag("homeCancel")){Text("참여 취소")}
     }
     if(register) HomeRegistrationDialog(onDismiss={register=false},onSave={model.registerHomeCharger(it);register=false})
@@ -101,7 +104,7 @@ import com.gridguild.core.*
         Text("필요할 때 한 번 저장하면 재사용합니다. 비워 두어도 미션에 참여할 수 있습니다.",fontSize=14.sp)
         OutlinedTextField(value=target,onValueChange={target=it},label={Text("목표 SOC (%) · 선택")},singleLine=true,isError=target.isNotBlank() && targetValue !in 1..100,modifier=Modifier.testTag("homeTargetSoc"))
         OutlinedTextField(value=departure,onValueChange={departure=it},label={Text("출발 시각 HH:mm · 선택")},singleLine=true,isError=departure.isNotBlank() && departureValue==null,modifier=Modifier.testTag("homeDeparture"))
-        Text("배터리가 부족하거나 출발 시간을 모르면 충전을 미루지 않습니다. 밤 시간은 모의 추천이며 목표 SOC 도달이나 완료 시각을 보장하지 않습니다. 변경한 설정은 다음 참여부터 적용됩니다.",fontSize=12.sp,color=Subtle)
+        Text("배터리가 부족하거나 출발 시간을 모르면 충전을 미루지 않습니다. 시간은 모의 추천이며 충전 완료를 보장하지 않습니다. 설정은 다음 참여부터 적용됩니다.",fontSize=14.sp,color=Subtle)
         if(!valid)Text("SOC는 1~100, 출발 시각은 07:30 형식으로 입력하세요.",color=MaterialTheme.colorScheme.error,fontSize=12.sp)
     }},confirmButton={Button(onClick={onSave(if(target.isBlank())null else targetValue,if(departure.isBlank())null else departureValue)},enabled=valid,modifier=Modifier.testTag("homeAdvancedSave")){Text("저장")}},dismissButton={TextButton(onClick=onDismiss){Text("닫기")}})
 }

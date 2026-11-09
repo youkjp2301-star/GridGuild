@@ -3,6 +3,7 @@ package com.gridguild.data
 import com.gridguild.core.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlin.random.Random
 
 /** Future public-API adapters provide normalized observations; UI never interprets API codes. */
 interface ChargingAvailabilityRepository {
@@ -14,16 +15,27 @@ enum class DemoAvailabilityScenario(val label: String) {
     FREE("여유"), BUSY("혼잡"), NONE("이용 가능 없음"), UNKNOWN("정보 없음"), STALE("오래된 정보"), MISSING("미수신")
 }
 
-class MockChargingAvailabilityRepository : ChargingAvailabilityRepository {
-    private val choices=mutableMapOf(
-        "sasang-river" to DemoAvailabilityScenario.FREE,"sasang-park" to DemoAvailabilityScenario.BUSY,
-        "centum" to DemoAvailabilityScenario.NONE,"centum-campus" to DemoAvailabilityScenario.FREE,
-        "gwangalli" to DemoAvailabilityScenario.BUSY,"gwangalli-marina" to DemoAvailabilityScenario.STALE,
-    )
+class MockChargingAvailabilityRepository(private val clock: ()->Long=System::currentTimeMillis,private val random: Random=Random.Default) : ChargingAvailabilityRepository {
+    private val choices=mutableMapOf<String,DemoAvailabilityScenario>()
+    private var refreshedAt=0L
     override val snapshots=MutableStateFlow<Map<String,StationAvailability>>(emptyMap())
-    init { refresh() }
+    init { shuffle() }
+    fun shuffle(keepFirstUsable: Boolean=true) {
+        choices.clear()
+        if(!keepFirstUsable) {
+            val all=listOf(DemoAvailabilityScenario.FREE,DemoAvailabilityScenario.FREE,DemoAvailabilityScenario.BUSY,DemoAvailabilityScenario.BUSY,DemoAvailabilityScenario.NONE,DemoAvailabilityScenario.UNKNOWN).shuffled(random)
+            SampleData.stations.forEachIndexed{i,s->choices[s.id]=all[i]}
+            refresh();return
+        }
+        // Keep the first walkthrough usable; the other five locations get a balanced mix.
+        choices["sasang-river"]=DemoAvailabilityScenario.FREE
+        val pool=listOf(DemoAvailabilityScenario.FREE,DemoAvailabilityScenario.BUSY,DemoAvailabilityScenario.BUSY,DemoAvailabilityScenario.NONE,DemoAvailabilityScenario.UNKNOWN).shuffled(random)
+        SampleData.stations.filter{it.id!="sasang-river"}.forEachIndexed{i,s->choices[s.id]=pool[i]}
+        refresh()
+    }
+    fun refreshIfDue() { if(clock()-refreshedAt>=60_000 || clock()<refreshedAt)refresh() }
     override fun refresh() {
-        val time=System.currentTimeMillis()
+        val time=clock();refreshedAt=time
         snapshots.value=SampleData.stations.mapNotNull{station->
             fixture(station,choices[station.id] ?: DemoAvailabilityScenario.UNKNOWN,time)?.let{station.id to it}
         }.toMap()
@@ -33,7 +45,7 @@ class MockChargingAvailabilityRepository : ChargingAvailabilityRepository {
         choices[stationId]=scenario
         // Changing one station must not refresh old readings at every other station.
         val updated=snapshots.value.toMutableMap()
-        fixture(SampleData.stations.first{it.id==stationId},scenario,System.currentTimeMillis())?.let{updated[stationId]=it}
+        fixture(SampleData.stations.first{it.id==stationId},scenario,clock())?.let{updated[stationId]=it}
             ?: updated.remove(stationId)
         snapshots.value=updated
     }
