@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,7 +44,11 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
     val tick by model.now.collectAsStateWithLifecycle()
     val now=System.currentTimeMillis().coerceAtLeast(tick)
     val platformAllowed by model.platformAllowed.collectAsStateWithLifecycle()
-    val introFinished=rememberIntroFinished(ready && platformAllowed && (allowed || game.districtId==null))
+    val introSeen by model.introSeen.collectAsStateWithLifecycle()
+    val introFinished=rememberIntroFinished(ready && platformAllowed && (allowed || game.districtId==null),introSeen)
+    LaunchedEffect(introFinished){if(introFinished)model.introSeen.value=true}
+    val neutralPreview by model.neutralPreview.collectAsStateWithLifecycle()
+    val normalState=rememberSaveableStateHolder()
     val unlocked=CityLevels.level(game.cityXp(game.districtId))
     LaunchedEffect(ready,allowed,game.districtId,unlocked) {
         if(ready && allowed && game.districtId!=null)preloadCityArt(resources,unlocked,unlocked)
@@ -61,6 +66,9 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
         }
     }
     GridTheme {
+        if(neutralPreview && game.mode==AppMode.MOCK && game.districtId!=null) {
+            NeutralCityScreen(game,navi,allowed && platformAllowed,model)
+        } else normalState.SaveableStateProvider("normal") {
         BoxWithConstraints(Modifier.fillMaxSize().background(Bg).safeDrawingPadding()) {
             val wide=maxWidth>=840.dp
             val compact=maxWidth<600.dp
@@ -136,6 +144,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                 confirmButton={TextButton(onClick={modeInfo=false;controls=true},modifier=Modifier.testTag("openModeControls")) { Text(if(game.mode==AppMode.MOCK) "데모 조작 열기" else "연결 설정 열기") }},
                 dismissButton={TextButton(onClick={modeInfo=false}){Text("닫기")}})
         }
+        }
     }
 }
 
@@ -201,6 +210,10 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                 OutlinedButton(onClick={model.mockUx(!s.uxAllowed)},modifier=Modifier.testTag("ux")) { Text(if(s.uxAllowed) "UX 제한" else "UX 허용") }
             }
             if(allowed) {
+                Button(onClick=model::enterNeutralPreview,modifier=Modifier.heightIn(min=52.dp).testTag("neutralTest")) {
+                    Icon(Icons.Outlined.Panorama,null);Spacer(Modifier.width(8.dp));Text("N단 도시 체험 · TEST")
+                }
+                Text("실제 기어는 바꾸지 않는 가상 체험 · P단·UX 제한 유지",fontSize=12.sp,color=Subtle)
                 TextButton(onClick={loadingPreview=true},modifier=Modifier.testTag("loadingPreview")){Text("도시 로딩 연출 미리보기")}
                 DemoResetControls(game,model::resetDemo)
             }

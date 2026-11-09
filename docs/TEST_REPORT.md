@@ -8,8 +8,8 @@
 | 공식 Pleos 이미지 | v2.1.0 API 34 x86_64, SHA1 `b4f858d5bcc6c71506d7edfc872bcb9e5a11acaa` 공식 목록과 일치 |
 | APK 빌드 | `:app:assembleDebug` 성공 |
 | Lint | `:app:lintDebug` 성공. 버전 업데이트 권고 등 경고는 남음 |
-| 단위 테스트 | 최신 0.9.0: `:core:test` **68개**, 실패/오류 0 |
-| 에뮬레이터 테스트 | 최신 0.9.0: **44개 통과**, 249.624초. 기존39개 + 로딩2/데모 흐름3개. 실제 Navi SDK 성공 수치가 아님 |
+| 단위 테스트 | 최신 0.10.0: `:core:test` **71개**, 실패/오류 0 |
+| 에뮬레이터 테스트 | 최신 0.10.0: **48개 통과**, 265.208초. 기존44개 + N단 도시 체험4개. 실제 Navi SDK 성공 수치가 아님 |
 | Git 추적 파일 구성 | 로컬 설정·SDK 폴더를 제외한 Git index export에서 assembleDebug + core:test + lintDebug 모두 성공 |
 | 실제 로컬 Clone | 첫 커밋 4a5fd0e를 `git clone --no-local`로 복제. JAVA_HOME/ANDROID_HOME만 지정해 APK + 24개 단위 테스트 + Lint 성공 (36초) |
 | 최종 코드 Clone | 코드 커밋 cfd0141로 fast-forward 후 같은 검사 재통과 (41초). local.properties 미포함 확인 |
@@ -19,7 +19,19 @@
 | Vehicle SDK 런타임 프로브 | **통과**. 실제 source=PLEOS, SOC=100.0%, 충전 스위치 OFF, GEAR_PARK, UX 허용 수신 |
 | Navi SDK 런타임 프로브 | **실패**. Navi Service 연결은 완료됐지만 30초 내 목적지 콜백 미수신. 실제 경유지 등록 성공은 미검증 |
 
-## 0.9.0 간결한 데모 경험 검증
+## 0.10.0 N단 도시 체험 검증
+
+- APK0.10.0/code11 빌드·Android 테스트 APK·core:test·lintDebug 성공. 순수 Kotlin71개 통과, Lint0오류/기존12경고. 실제 Pleos 런타임은 재검증하지 않았다.
+- 새 단위3개: 두 지역/근접 좌표, 겹치는 영역의 최근접 선택, 삼락·기장·무효 좌표 차단, Mock + 신선한 P/UX + 실제 플랫폼 허용 조건과 실제/미수신 출처 차단.
+- 새 기기4개: TEST 진입·가로 표시, 광안리↔센텀의 실제 Mock 목적지 좌표 변경, 선행 목적지 자동 장면 선택, 사진/크레딧, 원래 ROUTE 탭 복귀·미션/XP 원장 보존, D/UX 종료, 재생성·백그라운드·SDK 모드 차단. 실제 차량 N값을 조작하거나 검증하지 않는다.
+- 기존44개와 합친 전체48개를265.208초에 통과했다. HOME/ROUTE·중복 방지·추천/가용 상태·목적지/경유지/재탐색·초기화·도시 잠금·모션/보상·기존 안전·저장 재생성을 포함한다.
+- 처음 새4개는 Android 최초 전체 화면 안내가 입력을 가로막아 실패했다. 테스트에서 OS의 정상 확인 버튼을 닫도록 보완해4개를51.524초에 통과했다. 앱에서 시스템 설정을 우회하지 않는다.
+- 전체 첫 실행에서는 새4개 이후 기존 LoadingDurationTest의 Activity 종료 중 Compose SlotTable 예외가1회 발생했다. 해당 로딩 단독2개는9.632초에 통과했고, 로딩을 먼저 실행한 전체48개 재실행도 통과했다. 원인을 확정한 것으로 기록하지 않는다.
+- 출처 링크를 열 수 없는 환경의 처리까지 반영한 최종 APK에서 assembleDebug/assembleDebugAndroidTest/core:test/lintDebug 재성공(17초), 최초 오류와 동일한 N 체험→로딩 순서6개도61.725초에 재통과했다. 해당 종료 예외는 재현되지 않았으나 재발 시 별도 조사한다.
+- 1280×800의 광안대교·영화의전당 화면을 캡처·시각 검토했다. 원본 실사 JPEG와 크레딧은 [NEUTRAL_CITY.md](NEUTRAL_CITY.md), 테스트 PNG/APK는 Git 제외 artifacts/neutral/에 있다.
+- 시험 전 DataStore를 복원하고 백업/복원 SHA256 일치를 확인했다. 설치 버전0.10.0/code11·원래 기록 재실행과 애니메이터 배율1 유지를 확인했다. 실제 Pleos N 동작 성공을 의미하지 않는다.
+
+## 0.9.0 간결한 데모 경험 검증 (이전 기록)
 
 - 최종 :app:assembleDebug :app:assembleDebugAndroidTest :core:test :app:lintDebug 성공(49초), Lint0오류/기존12경고. 최초 새 코드의 모듈 간 smart-cast와 실제 출처 시험의 fixture 출처를 수정했다.
 - 기존39개+신규5개44개 전부 통과. 새 로딩2개는 실제 경과3초/캐시 적중 시 깜빡임 없음, 데모3개는 두 시간대/원클릭120XP/재시작 후 중복 방지, 실제 지역/개인 리스트, 여러 시드의 혼합 상태·11분 후 자동 갱신/의도적 미확인을 검증했다.

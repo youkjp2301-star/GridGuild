@@ -23,6 +23,9 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
     fun compatibleConnectors(): Set<ChargerConnector>? = if(game.value.mode==AppMode.MOCK)setOf(demoConnector.value) else null
     val ready = MutableStateFlow(false)
     val message = MutableStateFlow("")
+    val neutralPreview = MutableStateFlow(false)
+    var neutralOriginalOrientation: Int? = null
+    val introSeen = MutableStateFlow(false)
     private val rewardQueue = Channel<XpVisualEvent>(Channel.UNLIMITED)
     val rewards = rewardQueue.receiveAsFlow()
     val now = MutableStateFlow(System.currentTimeMillis())
@@ -46,6 +49,7 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
                 val old=game.value
                 val presentation=if(ready.value)XpVisualEvent.between(old,next) else null
                 game.value=next; ready.value=true
+                if(next.mode!=AppMode.MOCK)neutralPreview.value=false
                 // Publish the committed balance before waking an immediate UI collector.
                 presentation?.let{rewardQueue.trySend(it)}
                 if(next.mission?.stationId==startingMission.value || old.mode!=next.mode) startingMission.value=null
@@ -54,7 +58,10 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch { while (isActive) {
             now.value=System.currentTimeMillis()
-            if(automotive && foreground) platformAllowed.value=platform?.readAllowed()==true
+            if(automotive && foreground) {
+                platformAllowed.value=platform?.readAllowed()==true
+                if(!platformAllowed.value)neutralPreview.value=false
+            }
             if(foreground)availabilityRepository.refreshIfDue()
             delay(500)
         } }
@@ -62,13 +69,17 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
     fun resume() {
         foreground=true
         if(!automotive) platformAllowed.value=true
-        if(automotive) platform=PlatformSafetyMonitor(getApplication()) { platformAllowed.value=it }.also { it.connect() }
+        if(automotive) platform=PlatformSafetyMonitor(getApplication()) {
+            platformAllowed.value=it
+            if(foreground && !it)neutralPreview.value=false
+        }.also { it.connect() }
         if (ready.value && (activeMode!=game.value.mode || connectionJob?.isActive!=true)) connect(game.value.mode)
     }
-    fun pause() {
+    fun pause(changingConfiguration: Boolean=false) {
         // Navigation may take the foreground while processing a request. Keep its callbacks and
         // mission observations alive until this ViewModel is cleared; never keep game UI unlocked.
         foreground=false
+        if(!changingConfiguration)neutralPreview.value=false
         safety.value=SafetyState()
         platform?.close();platform=null;platformAllowed.value=false
     }
@@ -85,7 +96,10 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
                 vehicle.value=sample
                 if (sample.usable(System.currentTimeMillis())) mutate { MissionEngine.observe(it,sample,System.currentTimeMillis()) }
             } }
-            launch { v.safety.collect { safety.value=it } }
+            launch { v.safety.collect {
+                safety.value=it
+                if(it.source!=DataSource.UNAVAILABLE && (!it.parked || !it.uxAllowed))neutralPreview.value=false
+            } }
             launch { n.state.collect { navigation.value=it } }
             n.connect()
         }
@@ -104,6 +118,7 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
         if (Busan.find(district)!=null) mutate { it.copy(districtId=district,mode=mode,mission=null) }
     }
     fun setMode(mode: AppMode) = action(allowSetup=true) {
+        if(mode!=AppMode.MOCK)neutralPreview.value=false
         if(mode==game.value.mode) {
             message.value=if(mode==AppMode.MOCK) "현재 데모 모드입니다. 충전 ON과 SOC +2%로 미션을 테스트하세요." else "현재 Pleos SDK 모드입니다. 아래에서 연결 상태를 확인하세요."
             return@action
@@ -186,6 +201,13 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
     fun randomDemoDestination() = navigationAction { repository ->
         if(game.value.mode==AppMode.MOCK) (repository as? MockNavigationRepository)?.randomDestination()
     }
+    fun enterNeutralPreview() {
+        if(!NeutralCity.canEnter(game.value.mode,safety.value,platformAllowed.value,System.currentTimeMillis()) || !ready.value || game.value.districtId==null) {
+            message.value="N단 체험은 주차·UX 허용이 확인된 MOCK에서 이용할 수 있어요";return
+        }
+        neutralPreview.value=true
+    }
+    fun exitNeutralPreview() { neutralPreview.value=false }
     fun setDemoAvailability(stationId: String,scenario: DemoAvailabilityScenario) = action {
         if(game.value.mode==AppMode.MOCK)availabilityRepository.setScenario(stationId,scenario)
     }

@@ -80,8 +80,8 @@ internal suspend fun holdLoadingMinimum(started: Long) = withContext(Dispatchers
     val remaining=minimumLoadingMs-(android.os.SystemClock.elapsedRealtime()-started)
     if(remaining>0)delay(remaining)
 }
-@Composable internal fun rememberIntroFinished(enabled: Boolean=true): Boolean {
-    var done by remember{mutableStateOf(false)}
+@Composable internal fun rememberIntroFinished(enabled: Boolean=true,initialDone: Boolean=false): Boolean {
+    var done by remember{mutableStateOf(initialDone)}
     LaunchedEffect(enabled){if(enabled && !done){holdLoadingMinimum(android.os.SystemClock.elapsedRealtime());done=true}}
     return done
 }

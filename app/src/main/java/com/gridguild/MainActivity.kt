@@ -13,5 +13,5 @@ class MainActivity : ComponentActivity() {
         setContent { GridGuildApp(model) }
     }
     override fun onStart() { super.onStart();model.resume() }
-    override fun onStop() { model.pause();super.onStop() }
+    override fun onStop() { model.pause(isChangingConfigurations);super.onStop() }
 }
