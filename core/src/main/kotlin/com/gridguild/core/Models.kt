@@ -61,6 +61,7 @@ data class Station(
     val id: String, val name: String, val districtId: String,
     val lat: Double, val lon: Double, val xp: Int, val hourStart: Int, val hourEnd: Int,
     val green: Boolean = true,
+    val connectors: Set<ChargerConnector> = setOf(ChargerConnector.DC_COMBO),
 ) {
     val windowLabel get() = "%02d:00–%02d:00".format(hourStart, hourEnd)
     fun inWindow(now: Long): Boolean {
@@ -75,7 +76,7 @@ object SampleData {
         Station("gwangalli", "광안 해변 충전소", "suyeong", 35.1530, 129.1180, 120, 0, 24),
         Station("sasang-park", "삼락 공원 충전소", "sasang", 35.1760, 128.9840, 120, 0, 24),
         Station("centum-campus", "센텀 캠퍼스 충전소", "haeundae", 35.1770, 129.1240, 120, 0, 24),
-        Station("gwangalli-marina", "광안 마리나 충전소", "suyeong", 35.1460, 129.1250, 120, 0, 24),
+        Station("gwangalli-marina", "광안 마리나 충전소", "suyeong", 35.1460, 129.1250, 120, 0, 24,connectors=setOf(ChargerConnector.AC_TYPE1)),
     )
     // New location fixtures do not change the existing three-mission daily bonus contract.
     val dailyBonusStations get() = stations.filter { it.id in setOf("sasang-river","centum","gwangalli") }

@@ -17,7 +17,9 @@ object DemoDestinations {
     }.random(random)
 }
 
-data class NearbyStation(val station: Station,val distanceKm: Double)
+data class NearbyStation(val station: Station,val distanceKm: Double,
+    val availability: AvailabilitySummary=ChargingAvailability.summarize(null,0),
+    val compatibility: ConnectorCompatibility=ConnectorCompatibility.UNKNOWN,val detourKm: Double?=null)
 enum class RecommendationStatus { READY, NO_DESTINATION, HIGH_SOC, NO_NEARBY }
 data class RecommendationResult(val status: RecommendationStatus,val nearby: List<NearbyStation>)
 
@@ -30,11 +32,18 @@ object ChargingRecommendations {
         val a=sin(latitude/2).pow(2)+cos(Math.toRadians(lat1))*cos(Math.toRadians(lat2))*sin(longitude/2).pow(2)
         return 6371.0*2*asin(sqrt(a.coerceIn(0.0,1.0)))
     }
-    fun around(lat: Double?,lon: Double?,soc: Float?,stations: List<Station> = SampleData.stations): RecommendationResult {
+    fun around(lat: Double?,lon: Double?,soc: Float?,stations: List<Station> = SampleData.stations,
+        availability: Map<String,StationAvailability> = emptyMap(),observedAt: Long=System.currentTimeMillis(),
+        compatible: Set<ChargerConnector>?=null,detoursKm: Map<String,Double> = emptyMap()): RecommendationResult {
         if(!validCoordinates(lat,lon))return RecommendationResult(RecommendationStatus.NO_DESTINATION,emptyList())
         if(soc!=null && soc>=90f)return RecommendationResult(RecommendationStatus.HIGH_SOC,emptyList())
-        val nearby=stations.map { NearbyStation(it,distanceKm(lat!!,lon!!,it.lat,it.lon)) }
-            .filter { it.distanceKm<=radiusKm }.sortedWith(compareBy<NearbyStation>{it.distanceKm}.thenBy{it.station.id})
+        val nearby=stations.map { NearbyStation(it,distanceKm(lat!!,lon!!,it.lat,it.lon),
+            ChargingAvailability.summarize(availability[it.id]?.takeIf{sample->sample.stationId==it.id},observedAt,compatible),
+            ChargingAvailability.compatibility(it,compatible),detoursKm[it.id]?.takeIf{km->km.isFinite() && km>=0}) }
+            .filter { it.distanceKm<=radiusKm }.sortedWith(compareBy<NearbyStation>{it.compatibility==ConnectorCompatibility.INCOMPATIBLE}
+                .thenBy{candidate->(candidate.detourKm ?: candidate.distanceKm)+if(candidate.availability.compatibleAvailable==0)8.0 else when(candidate.availability.status){
+                    AvailabilityStatus.FREE->0.0;AvailabilityStatus.BUSY->1.5;AvailabilityStatus.UNKNOWN->2.5;AvailabilityStatus.NONE->8.0
+                }}.thenBy{it.distanceKm}.thenBy{it.station.id})
         return RecommendationResult(if(nearby.isEmpty())RecommendationStatus.NO_NEARBY else RecommendationStatus.READY,nearby)
     }
 }

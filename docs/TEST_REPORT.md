@@ -1,6 +1,6 @@
 # GridGuild 검증 기록
 
-확인일 2026-11-04~05 (Asia/Seoul). 문서 지원·컴파일·실제 서비스 성공을 구분한다.
+확인일 2026-11-04~09 (Asia/Seoul). 문서 지원·컴파일·실제 서비스 성공을 구분한다.
 
 | 검증 | 결과 |
 |---|---|
@@ -8,8 +8,8 @@
 | 공식 Pleos 이미지 | v2.1.0 API 34 x86_64, SHA1 `b4f858d5bcc6c71506d7edfc872bcb9e5a11acaa` 공식 목록과 일치 |
 | APK 빌드 | `:app:assembleDebug` 성공 |
 | Lint | `:app:lintDebug` 성공. 버전 업데이트 권고 등 경고는 남음 |
-| 단위 테스트 | 최신 0.7.0: `:core:test` **57개**, 실패/오류 0 |
-| 에뮬레이터 테스트 | 최신 0.7.0: **35개 통과**, 115.775초. 기존28개 + 아트/모션/실제 보상 흐름7개. HOME·ROUTE·초기화·저장·잠금·배터리/미션·P/D 및 데모 내비 전송 계층 포함. 실제 Navi SDK 성공 수치가 아님 |
+| 단위 테스트 | 최신 0.8.0: `:core:test` **64개**, 실패/오류 0 |
+| 에뮬레이터 테스트 | 최신 0.8.0: **39개 통과**, 110.998초. 기존35개 + 이용 현황4개. HOME·ROUTE·초기화·저장·잠금·배터리/미션·P/D 및 데모 내비 전송 계층 포함. 실제 Navi SDK 성공 수치가 아님 |
 | Git 추적 파일 구성 | 로컬 설정·SDK 폴더를 제외한 Git index export에서 assembleDebug + core:test + lintDebug 모두 성공 |
 | 실제 로컬 Clone | 첫 커밋 4a5fd0e를 `git clone --no-local`로 복제. JAVA_HOME/ANDROID_HOME만 지정해 APK + 24개 단위 테스트 + Lint 성공 (36초) |
 | 최종 코드 Clone | 코드 커밋 cfd0141로 fast-forward 후 같은 검사 재통과 (41초). local.properties 미포함 확인 |
@@ -19,7 +19,17 @@
 | Vehicle SDK 런타임 프로브 | **통과**. 실제 source=PLEOS, SOC=100.0%, 충전 스위치 OFF, GEAR_PARK, UX 허용 수신 |
 | Navi SDK 런타임 프로브 | **실패**. Navi Service 연결은 완료됐지만 30초 내 목적지 콜백 미수신. 실제 경유지 등록 성공은 미검증 |
 
-## 0.7.0 시각·모션 검증
+## 0.8.0 ROUTE 충전기 이용 현황 검증
+
+- `:app:assembleDebug :app:assembleDebugAndroidTest :core:test :app:lintDebug` 성공(2분58초). Lint 오류0/기존 경고12. 첫 컴파일의 기존 Compose FlowRow 미지원 인자를 제거해 수정했다.
+- 새 단위7개: 정확히50% 경계·가용0/고장/점검 제외·미수신/미래/10분 경계·부분 갱신·중복/잘못된 재고·상태 변경 시각과 관측 시각 분리·혼합 커넥터·거리/여유/호환 순위.
+- 새 Android 검사4개(화면3+저장소1): 카드 안 네 배지/수량·지연/미수신·가용0 신규 참여 방지·진행 중 가용0 전환 후120XP/도시Lv.2 유지·커넥터 불일치와 원래 Mock 경유지 요청·한 fixture 변경 시 다른 관측 시각 보존.
+- 네 상태의 실제 화면을 로컬 `artifacts/availability-v080/`에 캡처했다(Git 제외). 네이티브 대화상자 닫힘/목록 재정렬 후 촬영하도록 캡처 helper를 조정하고 새 검사4개를25.73초에 재통과했다.
+- 기존35개도 함께 통과했다. 보상 조건/중복 방지/HOME/목적지 변경/경유지/재탐색/초기화/잠금/안전/점멸 회귀를 유지한다.
+- 확인 기기는 표준 API34의800×1280 에뮬레이터다. 실제 환경공단 API·실제 도로 이탈 거리·실차 커넥터 수신 또는 Navi SDK 성공을 검증한 결과가 아니다.
+- 마지막 안내 문구 수정 뒤 APK·단위·Lint를 재확인(빌드1분58초)하고 새 Android4개도16.58초에 재통과했다. 테스트 전 백업을 복원하고 SHA256 일치를 확인했다.
+
+## 0.7.0 시각·모션 검증 (이전 기록)
 
 - `:app:assembleDebug :app:assembleDebugAndroidTest :core:test :app:lintDebug` 성공. Lint 오류0/경고12: 기존9개와 원본 보존으로 미사용인 v2 이미지3개다.
 - 실제 Android BitmapFactory로 v4 시대별2×2 아틀라스를 디코딩해12개 프레임의 서로 다른 픽셀 지문을 확인했다.

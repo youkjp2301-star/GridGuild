@@ -17,6 +17,10 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
     val vehicle = MutableStateFlow(VehicleState())
     val safety = MutableStateFlow(SafetyState())
     val navigation = MutableStateFlow(NavigationState())
+    private val availabilityRepository = MockChargingAvailabilityRepository()
+    val chargerAvailability: StateFlow<Map<String,StationAvailability>> = availabilityRepository.snapshots
+    val demoConnector = MutableStateFlow(ChargerConnector.DC_COMBO)
+    fun compatibleConnectors(): Set<ChargerConnector>? = if(game.value.mode==AppMode.MOCK)setOf(demoConnector.value) else null
     val ready = MutableStateFlow(false)
     val message = MutableStateFlow("")
     private val rewardQueue = Channel<XpVisualEvent>(Channel.UNLIMITED)
@@ -114,6 +118,10 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             if(!mutate {
                 require(platformAllowed.value && safety.value.allowsGame(System.currentTimeMillis())){"주차 상태를 다시 확인하세요"}
+                val summary=ChargingAvailability.summarize(chargerAvailability.value[station.id]?.takeIf{it.stationId==station.id},System.currentTimeMillis(),compatibleConnectors())
+                require(summary.status!=AvailabilityStatus.NONE){"이용 가능한 충전기가 없습니다. 다른 후보를 확인하세요"}
+                require(summary.compatibleAvailable!=0){"차량에 맞는 충전기에 빈자리가 없습니다"}
+                require(ChargingAvailability.compatibility(station,compatibleConnectors())!=ConnectorCompatibility.INCOMPATIBLE){"차량 커넥터와 맞지 않는 충전소입니다"}
                 MissionEngine.start(it,station,vehicle.value,System.currentTimeMillis(),"${station.id}:${UUID.randomUUID()}")
             }) startingMission.value=null
         }
@@ -153,6 +161,14 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun randomDemoDestination() = navigationAction { repository ->
         if(game.value.mode==AppMode.MOCK) (repository as? MockNavigationRepository)?.randomDestination()
+    }
+    fun setDemoAvailability(stationId: String,scenario: DemoAvailabilityScenario) = action {
+        if(game.value.mode==AppMode.MOCK)availabilityRepository.setScenario(stationId,scenario)
+    }
+    fun setDemoConnector(connector: ChargerConnector) = action { if(game.value.mode==AppMode.MOCK)demoConnector.value=connector }
+    fun refreshChargerAvailability() = action {
+        availabilityRepository.refresh()
+        message.value="MOCK 충전기 현황을 다시 불러왔어요. 실제 충전소 조회는 아닙니다."
     }
     fun mockSoc(value: Float) { (vehicleRepo as? MockVehicleRepository)?.set(soc=value) }
     fun mockCharge(on: Boolean) { (vehicleRepo as? MockVehicleRepository)?.set(charge=if(on) ChargeSignal.ON else ChargeSignal.OFF) }

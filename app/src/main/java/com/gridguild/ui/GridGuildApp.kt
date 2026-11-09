@@ -279,9 +279,14 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
 @Composable private fun RouteChargeScreen(g: GameState,reading: VehicleReading,n: NavigationState,now: Long,model: GridViewModel) {
     val v=reading.vehicle
     val starting by model.startingMission.collectAsStateWithLifecycle()
+    val availability by model.chargerAvailability.collectAsStateWithLifecycle()
+    val connector by model.demoConnector.collectAsStateWithLifecycle()
+    val compatible=if(g.mode==AppMode.MOCK)setOf(connector) else null
+    var connectorDialog by remember{mutableStateOf(false)}
+    val availabilityNow=System.currentTimeMillis().coerceAtLeast(now)
     val listState=rememberLazyListState()
     LaunchedEffect(g.mission?.id) { if(g.mission!=null) listState.animateScrollToItem(0) }
-    val recommendations=ChargingRecommendations.around(n.lat,n.lon,v.soc)
+    val recommendations=ChargingRecommendations.around(n.lat,n.lon,v.soc,availability=availability,observedAt=availabilityNow,compatible=compatible)
     val stations=recommendations.nearby.map{it.station}
     LazyColumn(state=listState,modifier=Modifier.testTag("missionList"),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         item { Section("충전 미션","내 이동에 맞는 충전으로, 도시의 다음 단계를 준비해요.") }
@@ -293,12 +298,24 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
         item { Panel(Modifier.fillMaxWidth()) {
             Text(if(recommendations.status==RecommendationStatus.HIGH_SOC)"충전 추천 중지" else "목적지 주변 충전소 · ${stations.size}곳",fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.testTag("nearbySummary"))
             Text(when(recommendations.status) {
-                RecommendationStatus.READY -> "반경 5 km 안의 샘플을 가까운 순서로 표시합니다."
+                RecommendationStatus.READY -> "반경 5 km 샘플 · 여유·거리·커넥터 호환성을 함께 고려합니다."
                 RecommendationStatus.NO_DESTINATION -> "목적지 좌표를 확인하면 주변 후보가 표시됩니다."
                 RecommendationStatus.HIGH_SOC -> "SOC 90% 이상으로 추가 충전을 권장하지 않습니다."
                 RecommendationStatus.NO_NEARBY -> if(g.mode==AppMode.MOCK)"목적지 반경 5 km 안에 샘플 충전소가 없습니다. 다른 테스트 목적지를 선택해 보세요."
                     else "목적지 반경 5 km 안에 샘플 충전소가 없습니다. 실제 시설의 부재를 뜻하지 않습니다."
             },fontSize=13.sp,color=Subtle,modifier=Modifier.testTag("nearbyReason"))
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                AvailabilityStatus.entries.forEach{status->
+                    val count=recommendations.nearby.count{it.availability.status==status}
+                    Text("${status.label} $count",fontSize=12.sp,color=Subtle)
+                }
+            }
+            Text("혼잡은 사용 현황의 간이 표시로 대기 차량·시간과 다릅니다. 도착 전 상태가 바뀔 수 있어요.",fontSize=12.sp,color=Subtle)
+            Text("MOCK 충전기 현황 · 경로 이탈 거리 미연동 · 목적지 직선거리로 비교",fontSize=12.sp,color=Subtle)
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick=model::refreshChargerAvailability,modifier=Modifier.testTag("refreshAvailability")){Text("상태 새로고침 (MOCK)")}
+                if(g.mode==AppMode.MOCK)TextButton(onClick={connectorDialog=true},modifier=Modifier.testTag("demoConnector")){Text("내 커넥터 · ${connector.label} (테스트)")}
+            }
         } }
         g.mission?.let { m -> item { Panel(Modifier.fillMaxWidth().testTag("activeMission")) {
             Text(if(m.kind==MissionKind.HOME)"우리 집 충전 참여 중 · ${m.source}" else "미션 진행 중 · ${m.source}",fontWeight=FontWeight.Bold,color=Blue)
@@ -310,16 +327,21 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
             Text("${(m.progress*100).toInt()}% · 미션 참여 시간 내 조건 충족 시 자동 완료 · 장소 미인증 데모 XP",fontSize=14.sp,color=Subtle)
             TextButton(onClick=model::cancelMission){Text("미션 취소")}
         } } }
-        items(stations,key={it.id}) { station ->
+        items(recommendations.nearby,key={it.station.id}) { candidate ->
+            val station=candidate.station
             val done=g.completedToday(station.id,now)
             val correctSource=v.source==if(g.mode==AppMode.MOCK)DataSource.MOCK else DataSource.PLEOS
-            val canStart=g.mission==null && starting==null && reading.fresh && correctSource && station.inWindow(now) && !done
+            val hasCharger=candidate.availability.status!=AvailabilityStatus.NONE && candidate.compatibility!=ConnectorCompatibility.INCOMPATIBLE && candidate.availability.compatibleAvailable!=0
+            val canStart=g.mission==null && starting==null && reading.fresh && correctSource && station.inWindow(now) && !done && hasCharger
             val buttonLabel=when {
                 done -> "오늘 완료"
                 g.mission?.stationId==station.id -> "미션 진행 중"
                 g.mission!=null -> "다른 미션 진행 중"
                 starting==station.id -> "미션 시작 중…"
                 starting!=null -> "시작 요청 처리 중"
+                candidate.availability.status==AvailabilityStatus.NONE -> "이용 가능한 충전기 없음"
+                candidate.compatibility==ConnectorCompatibility.INCOMPATIBLE -> "커넥터 불일치"
+                candidate.availability.compatibleAvailable==0 -> "호환 충전기 빈자리 없음"
                 !station.inWindow(now) -> "미션 참여 시간 아님"
                 !reading.fresh || !correctSource -> "차량 정보 확인 필요"
                 else -> "미션 시작"
@@ -330,11 +352,13 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                     Column(Modifier.weight(1f)) {
                         Text("${stations.indexOf(station)+1}. ${station.name}",fontSize=20.sp,fontWeight=FontWeight.Bold)
                         Text("${Busan.find(station.districtId)?.name} · "+if(station.hourStart==0 && station.hourEnd==24)"미션 상시 참여" else "미션 ${station.windowLabel}",color=Subtle)
-                        Text("목적지에서 직선 %.1f km".format(java.util.Locale.KOREA,recommendations.nearby.first{it.station.id==station.id}.distanceKm),fontSize=13.sp,color=Green)
+                        Text(station.connectors.joinToString(" / "){it.label},fontSize=13.sp,color=Subtle)
+                        Text(if(candidate.detourKm!=null)"경로 이탈 %.1f km".format(java.util.Locale.KOREA,candidate.detourKm) else "경로 이탈 미확인 · 목적지 직선 %.1f km".format(java.util.Locale.KOREA,candidate.distanceKm),fontSize=13.sp,color=Green)
                     }
                     BadgeText("+${station.xp} 데모 XP",Gold)
                 }
-                Text("MOCK · 녹색 전력망 여유 / 충전소 운영 정보 미연동",fontSize=14.sp,color=Subtle)
+                ChargerAvailabilityInfo(candidate,availabilityNow,g.mode==AppMode.MOCK){scenario->model.setDemoAvailability(station.id,scenario)}
+                Text("MOCK 전력망 · 이용 현황은 모의 데이터",fontSize=12.sp,color=Subtle)
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     Button(onClick={model.startMission(station)},enabled=canStart,shape=RoundedCornerShape(14.dp),modifier=Modifier.width(200.dp).heightIn(min=56.dp).testTag("mission-${station.id}")) {
                         if(starting==station.id) { CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(8.dp)) }
@@ -347,6 +371,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                     done -> "오늘의 보상은 이미 받았어요. 다음 충전소에 참여해 보세요."
                     g.mission?.stationId==station.id -> "위의 진행 카드에서 목표 SOC와 자동 완료 조건을 확인하세요."
                     g.mission!=null -> "진행 중인 미션을 완료하거나 취소한 후 시작할 수 있어요."
+                    !hasCharger -> "이용 가능한 호환 충전기가 있는 다른 후보를 확인하세요."
                     !reading.fresh || !correctSource -> "차량 정보를 기다리고 있어요. 데모에서는 상단 조작 메뉴를 사용할 수 있어요."
                     !station.inWindow(now) -> "보상 미션은 ${station.windowLabel}에 참여할 수 있어요. 충전소가 닫혔다는 뜻은 아닙니다."
                     else -> "충전 ON 상태에서 SOC가 2%p 증가하면 자동으로 완료됩니다."
@@ -361,6 +386,9 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
             Text("개인 +${if(e.personalCredit)e.xp else 0} · 도시 +${if(e.cityCredit)e.xp else 0} XP · ${GameState.day(e.at)} · ${if(e.kind=="DAILY") "일일 보너스" else "데모 충전 성과"}",color=Green)
         }
     }
+    if(connectorDialog && g.mode==AppMode.MOCK)AlertDialog(onDismissRequest={connectorDialog=false},title={Text("데모 차량 커넥터")},
+        text={Column { ChargerConnector.entries.forEach{type->TextButton(onClick={model.setDemoConnector(type);connectorDialog=false},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("connector-${type.name}")){Text(type.label)} } }},
+        confirmButton={TextButton(onClick={connectorDialog=false}){Text("닫기")}})
 }
 @Composable private fun CityScreen(g: GameState) {
     CityCollectionScreen(g)
