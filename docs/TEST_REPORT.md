@@ -1,6 +1,6 @@
 # GridGuild 검증 기록
 
-확인일 2026-11-04~09 (Asia/Seoul). 문서 지원·컴파일·실제 서비스 성공을 구분한다.
+확인일 2026-11-04~11 (Asia/Seoul). 문서 지원·컴파일·실제 서비스 성공을 구분한다.
 
 | 검증 | 결과 |
 |---|---|
@@ -8,8 +8,8 @@
 | 공식 Pleos 이미지 | v2.1.0 API 34 x86_64, SHA1 `b4f858d5bcc6c71506d7edfc872bcb9e5a11acaa` 공식 목록과 일치 |
 | APK 빌드 | `:app:assembleDebug` 성공 |
 | Lint | `:app:lintDebug` 성공. 버전 업데이트 권고 등 경고는 남음 |
-| 단위 테스트 | 최신 0.10.0: `:core:test` **71개**, 실패/오류 0 |
-| 에뮬레이터 테스트 | 최신 0.10.0: **48개 통과**, 265.208초. 기존44개 + N단 도시 체험4개. 실제 Navi SDK 성공 수치가 아님 |
+| 단위 테스트 | 최신 0.11.0: `:core:test` **78개**, 실패/오류 0 |
+| 에뮬레이터 테스트 | 0.11.0:53개 중50개 통과(552.554초), 기존 UI3개 실패. 스크롤 보완/대표 장면 최종2개 재검사 통과(46.741초), 내비 UI 자동검사2개 미해결. 새 장면8개+리소스1개 통과. 실제 Navi SDK 성공 수치가 아님 |
 | Git 추적 파일 구성 | 로컬 설정·SDK 폴더를 제외한 Git index export에서 assembleDebug + core:test + lintDebug 모두 성공 |
 | 실제 로컬 Clone | 첫 커밋 4a5fd0e를 `git clone --no-local`로 복제. JAVA_HOME/ANDROID_HOME만 지정해 APK + 24개 단위 테스트 + Lint 성공 (36초) |
 | 최종 코드 Clone | 코드 커밋 cfd0141로 fast-forward 후 같은 검사 재통과 (41초). local.properties 미포함 확인 |
@@ -19,7 +19,25 @@
 | Vehicle SDK 런타임 프로브 | **통과**. 실제 source=PLEOS, SOC=100.0%, 충전 스위치 OFF, GEAR_PARK, UX 허용 수신 |
 | Navi SDK 런타임 프로브 | **실패**. Navi Service 연결은 완료됐지만 30초 내 목적지 콜백 미수신. 실제 경유지 등록 성공은 미검증 |
 
-## 0.10.0 N단 도시 체험 검증
+## 0.11.0 레벨별 도로 위 1인칭 도시 검증
+
+- 내장 image_gen으로 두 목적지×12레벨=24개 개별 PNG 제작, 독립 [원본 시각 검수24개](design/driver-scenes/VISUAL_QA_V2.md) 완료. 원근/도로 하단/시대 재료/랜드마크 통합을 실제 열어 확인했다. 반려·수정 이력과 P2 한계를 남겼으며 무AI·실제 카메라 수치·구조 안전성 보장이 아니다.
+- [FINAL_ASSETS_V2.json](design/driver-scenes/FINAL_ASSETS_V2.json)의24개 SHA256은 프로젝트 PNG와 native 생성 원본이 일치함을 확인한 기록이다. 실제 앱 화면 성공과 구분한다.
+- APK0.11.0/code12, assembleDebug/assembleDebugAndroidTest/core:test/lintDebug 성공(4분14초). 단위78개/오류0, Lint오류0·경고14(기존12+보존한 구 사진 미사용2). 첫 Kotlin 변수 보간 오류1곳 수정 후 재빌드했다.
+- 기존 AVD 첫 전체 검사는 System has crashed로 중단됐다. 소프트웨어 렌더러의 원본과 별도 QA에서 새10개 중 Global Back1개가 각각 실패했다. 시스템 ANR 모달이 포커스를 보유했으므로 다른9개 통과도 정상 화면 증거로 간주하지 않는다. 실패한 같은 검사를 반복하지 않았다.
+- [장애 진단](EMULATOR_DIAGNOSIS_20261110.md): QA의 system ANR는 앱 최초 프로세스/Activity 시작 전의 패키지 무결성 검증 브로드캐스트 지연이다. CPU 부하가 높았고 원본의 DeadSystemException 최초 원인은 미확정이다. 앱 종료 뒤 남은 모달을 정상 Wait1회로 닫은 후, 실제 adb 터치로 홈/기존 도시/새 광안리 Lv.12와 시스템 Back 복귀를 정상 확인했다.
+- 활성 창이 앱인지 검증하는 캡처 assertion을 추가했다. 두 목적지×현재 Lv.2/12·미해금 차단·원장 보존 +24개 네이티브 PNG 해독/픽셀 고유성 검사2개가33.834초에 통과했다. 실제 화면4장을 `artifacts/driver-v011/runtime-qa/`에 회수했다. 과거 모달 캡처와 구분한다.
+- 원본 사용자 DataStore 복원/SHA256 일치, 정지 원본 AVD 전체31파일/약5.8GB 별도 복사본 SHA256 일치를 확인했다. 전체 AVD 백업의 재부팅 복구는 미검증이다.
+- 11월11일 기존 QA AVD를1회 실행해 정상 런처/ANR 없음 확인 후 최종 APK를 업데이트했다. 반복 부팅·초기화는 하지 않았다. APK/테스트 APK/core:test/lintDebug 최종 빌드 재성공(2분8초). 실험적 창 복원 패치는 되돌렸고 제출 후보와 분리했다.
+- QA의 첫 부팅 로그에는 GridGuild 실행 전부터 GMS/Bluetooth/YouTube 서비스의 ANR도 있었다. 패키지 검증만을 전체 장애의 유일 원인으로 단정하지 않는다.11월11일 정상 부팅/검사에서는 같은 ANR가 관찰되지 않았다.
+- APK0.11.0 후보: `artifacts/driver-v011/GridGuild-0.11.0-debug.apk`, SHA256 `f62bb1cc1a4b86bf87d6061deb8c9d52ad10cd320b3b817225b4fb78808b454e`. 이전0.10.0 APK도 보존했다. 실제 Pleos N/목적지/충전 응답 검증이 아니다.
+- 최종 APK의 회귀53개는552.554초에50개 통과/3개 실패였다. 새 장면8개와 리소스1개는 모두 통과했다.24단계 순회·원장 불변·하락 후 재잠금·지역 변경·콜드 로딩 취소·주행/UX 종료·재생성/백그라운드 제한을 포함한다. 두 번 실패한 기존 Global Back1개와 실제 SDK 프로브는 제외했으며54개 전체 통과로 표시하지 않는다.
+- 실패1: `DestinationDemoFlowTest.highSocSuspensionDoesNotClaimTheAreaHasNoStations`는 작은 화면의 LazyColumn 아래 문구를 스크롤 전에 기다렸다. 검사에 명시적 스크롤만 추가하고 단독 재검사에서 통과했다. 앱 동작은 바꾸지 않았다.
+- 실패2~3: `NavigationFlowTest.bothButtonsShowProgressAndProduceVisibleResultsEveryTime`의 순간 비활성 상태, `refreshKeepsTheSelectedDestinationAndItsNearbyRecommendations`의 충전소 목적지 변경 확인이 미통과다.650ms Mock 응답과 검사 프레임의 경합, 작은 화면의 클릭 범위가 가설이며 원인을 확정하지 않았다. 같은 실패를 무한 재시도하거나 assertion을 제거하지 않았다. 실제 adb 터치로 새로고침 요청#1→재탐색 완료#2→새로고침 완료#3은 정상 확인했고, 내비 저장소 검사5개도 통과했다. 특정 충전소 선택 자동검사의 실패는 별도 미해결로 남긴다.
+- 장면8개 기능 검사가 통과해도 일부 순회 캡처가 진입 alpha=0 프레임이었다. 해당 캡처는 정상 증거에서 제외했다. 캡처 helper에서 애니메이션 시계를500ms 진행하고 실제 프레임 표시500ms를 기다리도록 보완했다. 대표4장+SOC 스크롤 최종2개를46.741초에 재통과했고, 최종 정상4장은 `artifacts/driver-v011/runtime-qa/final-apk/`에서 직접 확인했다. 나머지20단계는 선택/리소스/잠금 기능 검사 성공과 원본 시각 검수까지이며, 모든 기기 캡처가 정상이라고 주장하지 않는다.
+- 최종 회귀 구간의 `am_anr`/`am_crash` 기록은 없었다.24장 순회 중 앱 PSS 약199~202MiB가 관찰됐고 앱 OOM은 없었다. 로그와 실패를 `.tools/driver-diagnostics-20261110/`에 보존했다. Lint 최종 재검사도 별도 로그에 남겼다.
+
+## 0.10.0 N단 도시 체험 검증 (이전 기록)
 
 - APK0.10.0/code11 빌드·Android 테스트 APK·core:test·lintDebug 성공. 순수 Kotlin71개 통과, Lint0오류/기존12경고. 실제 Pleos 런타임은 재검증하지 않았다.
 - 새 단위3개: 두 지역/근접 좌표, 겹치는 영역의 최근접 선택, 삼락·기장·무효 좌표 차단, Mock + 신선한 P/UX + 실제 플랫폼 허용 조건과 실제/미수신 출처 차단.

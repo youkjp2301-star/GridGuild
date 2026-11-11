@@ -1,0 +1,9 @@
+{
+  "id": "centum_11_v2",
+  "asset": "driver_centum_lv11_v2.png",
+  "sourceFile": "exec-91a3ef76-235b-4da6-8f88-8aba20627e3d.png",
+  "revised": true,
+  "revision": "final-wall-sign-cleanup",
+  "prompt": "Precise tiny-sign removal in this supplied Level11 driver street image. Keep the entire scene, road viewpoint, all buildings/gardens/roof/skybridge/people/lighting EXACTLY unchanged. At original1672x941 coordinates, there is a SMALL WHITE WALL / PLAQUE with a dark symbol near x1040–1065, y488–509 (roughly62.5% across,53% down), in the middle-right beneath the planted terrace edge and just below the glass skywalk. REMOVE that dark mark AND the plaque itself completely. Make that white wall area (approx x1020–1100,y460–530) naturally continuous plain UNMARKED pale plaster/concrete, with the existing believable subtle surface shade. No black writing, no logo, no symbol, no new sign or sticker. Preserve adjacent vegetation and structural supports. Also keep the previously cleaned ground-floor shop glazing blank. Do not add or change anything else. No crop, no camera change, no text/HUD. Same wide16:9 full scene.",
+  "date": "2026-11-10"
+}

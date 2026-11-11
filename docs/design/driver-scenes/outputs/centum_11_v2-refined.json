@@ -1,0 +1,9 @@
+{
+  "id": "centum_11_v2",
+  "asset": "driver_centum_lv11_v2.png",
+  "sourceFile": "exec-145c2c29-5f76-4e94-8eb6-dd80fa1773bc.png",
+  "revised": true,
+  "revision": "final-refinement",
+  "prompt": "Precise cleanup of the supplied Level11 first-person vertical-garden Cinema Center street. PRESERVE ALL composition, camera, road convergence, towers, gardens, people proportions, Big Roof/double-cone support and skybridge connections, lighting and surface texture. REMOVE ALL SMALL SIGN LETTERING, logos and gibberish shop-window text especially on the LEFT ground-floor storefront glazing. Replace the lettered band naturally with plain clean tinted glazing showing believable warm shop interior reflections, not blurred or smeared paint. No new letters anywhere, no fake logos/watermarks/HUD. Keep road arrows and ordinary traffic lane markings unchanged. No other structural or style change. Output the same wide16:9 naturally photographed virtual street.",
+  "date": "2026-11-10"
+}

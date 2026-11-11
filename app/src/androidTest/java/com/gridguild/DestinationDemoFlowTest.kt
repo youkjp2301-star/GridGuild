@@ -76,10 +76,13 @@ class DestinationDemoFlowTest {
     }
     @Test fun highSocSuspensionDoesNotClaimTheAreaHasNoStations() {
         ui.activityRule.scenario.onActivity { androidx.lifecycle.ViewModelProvider(it)[GridViewModel::class.java].mockSoc(90f) }
+        // Compact QA displays do not compose the lower LazyColumn section until it is visible.
+        show("nearbySummary")
         ui.waitUntil(8_000){ui.onAllNodesWithText("충전 추천 중지").fetchSemanticsNodes().isNotEmpty()}
         show("nearbyReason");ui.onNodeWithTag("nearbyReason").assertTextContains("SOC 90%",substring=true)
         ui.onNodeWithTag("nearbyMap").assertDoesNotExist()
         ui.activityRule.scenario.onActivity { androidx.lifecycle.ViewModelProvider(it)[GridViewModel::class.java].mockSoc(89f) }
+        show("nearbySummary")
         ui.waitUntil(8_000){ui.onAllNodesWithText("목적지 주변 충전소 · 2곳").fetchSemanticsNodes().isNotEmpty()}
         show("nearbyMap");ui.onNodeWithTag("nearbyMap").assertExists()
     }
