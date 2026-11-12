@@ -17,6 +17,7 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
     val vehicle = MutableStateFlow(VehicleState())
     val safety = MutableStateFlow(SafetyState())
     val navigation = MutableStateFlow(NavigationState())
+    val leisurePlaceRepository: LeisurePlaceRepository = MockLeisurePlaceRepository()
     private val availabilityRepository = MockChargingAvailabilityRepository()
     val chargerAvailability: StateFlow<Map<String,StationAvailability>> = availabilityRepository.snapshots
     val demoConnector = MutableStateFlow(ChargerConnector.DC_COMBO)
@@ -221,6 +222,20 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
     fun mockCharge(on: Boolean) { (vehicleRepo as? MockVehicleRepository)?.set(charge=if(on) ChargeSignal.ON else ChargeSignal.OFF) }
     fun mockPark(parked: Boolean) { (vehicleRepo as? MockVehicleRepository)?.park(parked) }
     fun mockUx(allowed: Boolean) { (vehicleRepo as? MockVehicleRepository)?.let { it.park(it.safety.value.parked,allowed) } }
+    fun stepDemoCityLevel(delta: Int,expectedDistrictId: String?) = action {
+        var changed=false
+        val saved=mutate { state ->
+            if(state.mode==AppMode.MOCK && state.districtId==expectedDistrictId && platformAllowed.value &&
+                safety.value.allowsGame(System.currentTimeMillis())) {
+                DemoCityLevels.step(state,delta,System.currentTimeMillis(),"test-level:${UUID.randomUUID()}")
+                    .also{changed=it!=state}
+            } else state
+        }
+        if(saved && changed) {
+            while(rewardQueue.tryReceive().isSuccess) { /* A test adjustment is not an earned award. */ }
+            message.value="선택 지역의 데모 도시 레벨을 변경했어요. 내 XP와 충전 미션은 유지됩니다."
+        }
+    }
     fun resetDemo(target: DemoResetTarget,expectedDistrictId: String?) = action {
         var authorized=false
         val saved=mutate { state ->

@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gridguild.core.*
 
-@Composable internal fun DemoResetControls(game: GameState,onReset: (DemoResetTarget,String?)->Unit) {
+@Composable internal fun DemoResetControls(game: GameState,onReset: (DemoResetTarget,String?)->Unit,onLevelStep: (Int,String?)->Unit) {
     var pending by remember(game.districtId,game.mode) { mutableStateOf<DemoResetTarget?>(null) }
     val district=Busan.find(game.districtId)
     val cityXp=game.cityXp(game.districtId)
@@ -23,6 +23,16 @@ import com.gridguild.core.*
         HorizontalDivider(color=Line,modifier=Modifier.padding(vertical=6.dp))
         Text("테스트 데이터 초기화",fontWeight=FontWeight.SemiBold,color=Ink)
         Text("도시 Lv.${CityLevels.level(cityXp)} · 도시 $cityXp XP · 내 포인트 ${game.xp} XP",fontSize=13.sp,color=Subtle)
+        val level=CityLevels.level(cityXp)
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+            listOf(-1 to "도시 레벨 −1",1 to "도시 레벨 +1").forEach { (delta,label) ->
+                OutlinedButton(onClick={onLevelStep(delta,game.districtId)},
+                    enabled=game.mode==AppMode.MOCK && district!=null && (if(delta<0)level>1 else level<12),
+                    shape=RoundedCornerShape(12.dp),modifier=Modifier.heightIn(min=48.dp)
+                        .testTag(if(delta<0)"cityLevelMinus" else "cityLevelPlus")) { Text(label) }
+            }
+        }
+        Text("Lv.1–12 · 도시 XP만 테스트 값으로 조정해요. 내 XP·충전 미션은 유지됩니다.",fontSize=12.sp,color=Subtle)
         FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
             listOf(DemoResetTarget.CITY_LEVEL,DemoResetTarget.CHARGING_MISSIONS,DemoResetTarget.PERSONAL_POINTS).forEach { target ->
                 OutlinedButton(onClick={pending=target},enabled=target!=DemoResetTarget.CITY_LEVEL || district!=null,

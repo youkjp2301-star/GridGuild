@@ -215,7 +215,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                 }
                 Text("실제 기어는 바꾸지 않는 가상 체험 · P단·UX 제한 유지",fontSize=12.sp,color=Subtle)
                 TextButton(onClick={loadingPreview=true},modifier=Modifier.testTag("loadingPreview")){Text("도시 로딩 연출 미리보기")}
-                DemoResetControls(game,model::resetDemo)
+                DemoResetControls(game,model::resetDemo,model::stepDemoCityLevel)
             }
         }
     }
@@ -305,11 +305,17 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
     val compatible=if(g.mode==AppMode.MOCK)setOf(connector) else null
     var connectorDialog by remember{mutableStateOf(false)}
     var stationOptions by rememberSaveable{mutableStateOf(false)}
+    val allowed by model.gameAllowed.collectAsStateWithLifecycle()
+    var leisureStationId by remember(g.mode){mutableStateOf<String?>(null)}
     val availabilityNow=System.currentTimeMillis().coerceAtLeast(now)
     val listState=rememberLazyListState()
     LaunchedEffect(g.mission?.id) { if(g.mission!=null) listState.animateScrollToItem(0) }
     val recommendations=ChargingRecommendations.around(n.lat,n.lon,v.soc,availability=availability,observedAt=availabilityNow,compatible=compatible)
     val stations=recommendations.nearby.map{it.station}
+    val leisureStation=stations.firstOrNull{it.id==leisureStationId}
+    LaunchedEffect(allowed,stations.map{it.id}) {
+        if(!allowed || leisureStation==null)leisureStationId=null
+    }
     LazyColumn(state=listState,modifier=Modifier.testTag("missionList"),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         item { Section("충전 미션","내 이동에 맞는 충전으로, 도시의 다음 단계를 준비해요.") }
         item { Panel(Modifier.fillMaxWidth()) {
@@ -386,6 +392,10 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                     OutlinedButton(onClick={model.addWaypoint(station)},enabled=!n.pending,modifier=Modifier.heightIn(min=52.dp).testTag("waypoint-${station.id}")) { Text(if(g.mode==AppMode.MOCK) "경유지 추가 (MOCK)" else "샘플 좌표 경유지 요청") }
                     TextButton(onClick={model.setDestination(station)},enabled=!n.pending,modifier=Modifier.testTag("destination-${station.id}")){Text(if(g.mode==AppMode.MOCK)"목적지로 설정 (테스트)" else "샘플 좌표로 내비 목적지 요청")}
                 }
+                TextButton(onClick={leisureStationId=station.id},enabled=allowed,
+                    modifier=Modifier.fillMaxWidth().heightIn(min=52.dp).testTag("leisure-${station.id}")) {
+                    Icon(Icons.Outlined.Explore,null,Modifier.size(20.dp));Spacer(Modifier.width(9.dp));Text("충전하는 동안 뭐 하지?")
+                }
                 val footnote=when {
                     done -> "오늘의 보상은 이미 받았어요. 다음 충전소에 참여해 보세요."
                     g.mission?.stationId==station.id -> "위의 진행 카드에서 목표 SOC와 자동 완료 조건을 확인하세요."
@@ -409,6 +419,9 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
     if(connectorDialog && g.mode==AppMode.MOCK)AlertDialog(onDismissRequest={connectorDialog=false},title={Text("데모 차량 커넥터")},
         text={Column { ChargerConnector.entries.forEach{type->TextButton(onClick={model.setDemoConnector(type);connectorDialog=false},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("connector-${type.name}")){Text(type.label)} } }},
         confirmButton={TextButton(onClick={connectorDialog=false}){Text("닫기")}})
+    if(allowed && leisureStation!=null)key(leisureStation.id,g.mode) {
+        ChargingLeisureSheet(leisureStation,g,reading,availabilityNow,model.leisurePlaceRepository){leisureStationId=null}
+    }
 }
 @Composable private fun CityScreen(g: GameState) {
     CityCollectionScreen(g)

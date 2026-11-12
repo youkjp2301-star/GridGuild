@@ -6,7 +6,7 @@ data class XpVisualEvent(val id: String,val personalGain: Int,val cityGain: Int,
         fun between(previous: GameState,next: GameState): XpVisualEvent? {
             if(previous.districtId!=next.districtId || previous.mode!=next.mode)return null
             val known=previous.history.map{it.id}.toSet()
-            val added=next.history.filter{it.id !in known && it.xp>0}
+            val added=next.history.filter{it.id !in known && it.xp>0 && it.kind!=DemoCityLevels.eventKind}
             val personal=added.filter{it.personalCredit}.sumOf{it.xp}
             val city=added.filter{it.cityCredit && it.districtId==next.districtId}.sumOf{it.xp}
             if(personal==0 && city==0)return null
