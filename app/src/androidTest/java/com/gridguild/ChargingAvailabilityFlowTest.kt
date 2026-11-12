@@ -90,9 +90,13 @@ class ChargingAvailabilityFlowTest {
         show("demoConnector");ui.onNodeWithTag("demoConnector").performClick()
         ui.onNodeWithTag("connector-DC_COMBO").performClick()
         show("refreshAvailability");ui.onNodeWithTag("refreshAvailability").performClick()
+        lateinit var model: GridViewModel
+        ui.activityRule.scenario.onActivity{model=ViewModelProvider(it)[GridViewModel::class.java]}
+        val previousRequest=model.navigation.value.requestId
         show("waypoint-sasang-river");ui.onNodeWithTag("waypoint-sasang-river").performClick()
-        show("navStatus")
-        ui.waitUntil(8_000){ui.onAllNodesWithText("데모 경유지 반영 완료",substring=true).fetchSemanticsNodes().isNotEmpty()}
+        ui.waitUntil(8_000){model.navigation.value.let{it.requestId>previousRequest && !it.pending &&
+            it.confirmed && it.operation==NavigationOperation.WAYPOINT}}
+        show("navStatus");ui.onNodeWithTag("navStatus").assertTextEquals("경유지 추가 완료")
         assertEquals(0,state().xp)
     }
     @Test fun updatingOneMockStationDoesNotReTimestampAnother() {

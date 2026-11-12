@@ -9,7 +9,7 @@
 | APK 빌드 | `:app:assembleDebug` 성공 |
 | Lint | `:app:lintDebug` 성공. 버전 업데이트 권고 등 경고는 남음 |
 | 단위 테스트 | 최신 0.13.0: `:core:test` **96개**, 실패/오류 0 |
-| 에뮬레이터 테스트 | 0.13.0 선택21개를 여러 실행에서 확인. 첫20개19통과/1실패→보완 후6개 재검사 통과→최종 방향3개 통과. 전체66개 및 실제 SDK 프로브를 재실행한 것은 아님 |
+| 에뮬레이터 테스트 | 0.14.0 모바일360dp/가로1280×800의 고유33개를 여러 실행에서 확인. 초기 실패·수정·재검사 결과는 아래에 구분. 전체72개 및 실제 SDK 프로브를 재실행한 것은 아님 |
 | Git 추적 파일 구성 | 로컬 설정·SDK 폴더를 제외한 Git index export에서 assembleDebug + core:test + lintDebug 모두 성공 |
 | 실제 로컬 Clone | 첫 커밋 4a5fd0e를 `git clone --no-local`로 복제. JAVA_HOME/ANDROID_HOME만 지정해 APK + 24개 단위 테스트 + Lint 성공 (36초) |
 | 최종 코드 Clone | 코드 커밋 cfd0141로 fast-forward 후 같은 검사 재통과 (41초). local.properties 미포함 확인 |
@@ -18,6 +18,30 @@
 | Virtual Console | SOC 42%, 충전 OFF, 기어 P 설정을 Aside가 UI에서 확인 |
 | Vehicle SDK 런타임 프로브 | **통과**. 실제 source=PLEOS, SOC=100.0%, 충전 스위치 OFF, GEAR_PARK, UX 허용 수신 |
 | Navi SDK 런타임 프로브 | **실패**. Navi Service 연결은 완료됐지만 30초 내 목적지 콜백 미수신. 실제 경유지 등록 성공은 미검증 |
+
+## 0.14.0 Premium Minimal Bento 전면 리디자인 검증
+
+- 첨부9.70초 영상에서19프레임을 추출해 카드 비율·명도·수치/선택/진행 모션을 확인했다. 새 비트맵을 생성하거나 레퍼런스 자산을 복사하지 않고 Compose UI로 재구성했다. Aside의 브리프 기반 사용성 검토6항목(대비/비율/결측/원장/샘플/모션)도 반영했으며 Aside가 실제 앱을 시각 검증한 것으로 집계하지 않는다.
+- 공통 BentoCard/StatCard/SocGauge/AnimatedNumber/BentoProgress/StatusBadge/PrimaryButton/SectionHeader와 새 HomeDashboard/BentoRankingScreen을 추가했다. HOME·ROUTE·도시·내비/충전소·즐길거리는 기존 콜백과 태그를 유지하며 새 토큰·레이아웃·누름/진행 효과를 적용했다. XP 파티클·강한 그림자·바운스를 제거했다.
+- core96개 실패/오류0, APK/테스트 APK/core/Lint 첫 빌드54초 성공. 추가 정리50초·CTA22초·모바일 보완16초·통합34초 성공. 작은화면 게이지 크기 보완 중 DSL implicit receiver 컴파일 오류1회를 발견해 폭 조건을 명시 변수로 캡처하여 수정했고 재빌드32초 성공. 테스트 표시 보완 후 테스트APK/Lint11초 성공. Lint0오류/기존14경고다.
+- 첫 모바일 신규3개는44.971초에2통과/1실패였다. 홈 CTA가 이전에 저장된 HOME/ROUTE 선택에 덮이는 실제 이동 오류를 발견했다. 단발 요청 ID/소비 상태를 사용해 명시적 CTA를 우선하고 보통 탭 복귀는 기존 선택을 유지하도록 수정했다. 지역 랭킹 CTA에도 같은 처리와 검사를 적용했다.
+- 모바일360dp 회귀27개202.354초에26통과/1실패: 새 대시보드3/HOME3/기본 미션·SDK 미확인·재생성3/잠금·모드·SOC 안정4/가용 현황4/내비UI2/즐길거리 목적지1/도시·XP 실제화면2/모션·자산5. 실패1개는 이전 버전 긴 경유지 문구를 기다리던 검사였다. 새 요청ID·WAYPOINT·confirmed 및 실제 표시문구를 확인하도록 보완했다. 가용0 신규 차단·진행 미션/120XP 유지·호환·네 상태와 대수도 확인했다.
+- 가로1280×800 검사11개104.137초에9통과/2실패였다. 신규4개(실제 랭킹 변화·범위 리셋 포함), 지역3~11/개인33명 샘플, Mock 갱신, 보완한 경유지·SDK 미확인·N 안전이 통과했다. 추천 시간은 새 카드의 시작/종료 Text 분리로 기존 문자열 검사가 실패해 두 구간 각각을 확인하도록 수정했다. N 방향 검사는 자연 패널 축을 전제하는데 가로 override를 유지한 상태에서 실행하여 진입 전 조건에서 실패했다. 앱 방향 오류로 집계하지 않고 정상 패널 조건에서 재실행했다.
+- 최종360dp 신규4+추천시간/원클릭120XP1+N양방향1은78.942초에6개 모두 통과했다. 실제 ON+43%에서 미션50%,44%에서 개인/도시120XP·Lv2·완료 상태, 재생성/재진입/오늘 중복 차단, D/UX에서 화면·CTA 숨김과 원장 보존을 확인했다. 지역/개인 순위는 같은 범위에서 저장 점수가 변한 경우만 이전→현재를 표시하고 필터 변경 시 초기화했다.
+- 고유33개를 여러 실행에서 확인한 범위이며 전체72개 일괄 통과나 실제 Vehicle/Navi 서비스 종단 성공을 의미하지 않는다. 초기 실패를 숨기거나 전체 일괄 성공으로 바꾸지 않는다. 표기와 실제 레이아웃 보완을 구분한다.
+- QA는 기존 AVD를1회 실행한 뒤 재부팅·재생성·초기화 없이 사용했다. 수집된 event의am_anr/am_crash0건이며 앱 AndroidRuntime FATAL 기록도 없었다. 실제 캡처는 활성 패키지com.gridguild 확인·안정화 대기 후 저장했다. 모바일/가로의 홈·참여전·50%진행·완료·랭킹과 기존 도시/ROUTE/XP 캡처를 직접 검토했다.
+- QA 진행을 사전 백업으로 복원하고 원래 size/density/회전 설정으로 되돌렸다. 원본 기기에는 자동 fixture를 실행하지 않고 이전 APK·진행을 앱 내부/PC에 백업한 뒤0.14.0/code15로 업데이트했다. 진행SHA256은 업데이트 전후·실제 Home 확인 후 동일했다. 실제SDK 미연동과 원본 AVD의 기존 논리PORT/N여백 한계는 이전과 동일하다.
+- 지역 공동 점수와 개인 기여를 혼동하지 않도록 랭킹 강조 카드의 숫자 이름을 ‘랭킹 점수’로 정리했다. 표기만 보완한 최종 APK/테스트/core/Lint31초 성공. 전달 APK는 `artifacts/bento-v014/release/GridGuild-0.14.0-debug.apk`, SHA256 `cd26fa4da622d0a203ee81c4da0edd57384bf02523e728d9c0e8625140e8c76b`다. 중간 검수 APK도 보존했다.
+- 최종 APK의 실제 랭킹 변화/범위 리셋 단독1개도13.927초에 통과하고 현재 기기/QA 실제 설치base.apk와 전달 APK의 SHA256 일치를 확인했다. QA는 다시 사전 진행SHA256 `191fdbdcae7323ead5f53ced0bacb248c205e71cd1b9d574226f8e91b0356631`로 복원했다. 원본 진행SHA256 `5d93202a8f7a74516b89e1797f028ff97243c6b1f26f2c4c48ab13fe2fd46dcb`도 최종 Home 확인 후 동일했다.
+
+### 변경 파일
+
+- 공통 디자인/모션: `GridTheme.kt`, `BentoComponents.kt`, `CityMotion.kt`.
+- 화면/흐름: `GridGuildApp.kt`, `HomeDashboard.kt`, `HomeChargeScreen.kt`, `BentoRankingScreen.kt`, `CityCollectionScreen.kt`.
+- 충전/내비/위치도: `ChargingAvailabilityView.kt`, `ChargingLeisureSheet.kt`, `NavigationControls.kt`, `NearbyStationMap.kt`.
+- 버전/검사: `app/build.gradle.kts`, `BentoDashboardFlowTest.kt`, `ChargingAvailabilityFlowTest.kt`, `DemoPolishFlowTest.kt`, `VisualAppFlowTest.kt`.
+- 문서: `PRD.md`, `README.md`, `DEV_LOG.md`, `docs/design/BENTO_UI.md`, `docs/TEST_REPORT.md`.
+- core·ViewModel·Repository·SDK 의존 버전·DataStore schema·원장은 변경하지 않았다. 렌더링 시 결측·현재 모드에 맞는 출처·신선도를 확인하고 실제 충전 제어/ETA/목표/순위변동을 꾸미지 않는다.
 
 ## 0.13.0 시연 화면 정리·장소 목적지·N 방향 검증
 

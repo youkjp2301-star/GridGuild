@@ -10,32 +10,35 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-internal val Blue=Color(0xFF41604B)
-internal val Ink=Color(0xFF252B26)
-internal val Subtle=Color(0xFF647064)
-internal val Pale=Color(0xFFEAE7DE)
-internal val Bg=Color(0xFFF7F4ED)
-internal val Paper=Color(0xFFFFFDF8)
-internal val Green=Color(0xFF3F775C)
-internal val Gold=Color(0xFFB88A43)
-internal val Line=Color(0xFFDEDCD3)
-internal val SoftGreen=Color(0xFFE4ECE2)
+internal val GreenDark=Color(0xFF187344)
+internal val Blue=GreenDark
+internal val Ink=Color(0xFF171A18)
+internal val Subtle=Color(0xFF66716B)
+internal val Pale=Color(0xFFECEFEC)
+internal val Bg=Color(0xFFF6F7F5)
+internal val Paper=Color.White
+internal val Green=Color(0xFF37C67A)
+internal val Gold=Color(0xFFB07829)
+internal val Line=Color(0xFFE6EAE6)
+internal val SoftGreen=Color(0xFFE1F5E9)
+internal val Charcoal=Color(0xFF202522)
+internal val OnDarkMuted=Color(0xFFB8C6BD)
 
 @Composable internal fun GridTheme(content: @Composable ()->Unit) {
     MaterialTheme(
         colorScheme=lightColorScheme(
-            primary=Blue,onPrimary=Color.White,primaryContainer=Pale,onPrimaryContainer=Ink,
+            primary=GreenDark,onPrimary=Color.White,primaryContainer=SoftGreen,onPrimaryContainer=Ink,
             secondary=Green,onSecondary=Color.White,secondaryContainer=SoftGreen,onSecondaryContainer=Color(0xFF18564E),
             tertiary=Gold,onTertiary=Color.White,tertiaryContainer=Color(0xFFF4EEDF),onTertiaryContainer=Color(0xFF624921),
             background=Bg,onBackground=Ink,surface=Paper,onSurface=Ink,
             surfaceTint=Blue,surfaceDim=Pale,surfaceBright=Paper,
             surfaceContainerLowest=Paper,surfaceContainerLow=Bg,
-            surfaceContainer=Bg,surfaceContainerHigh=Color(0xFFF0EEE5),surfaceContainerHighest=Pale,
+            surfaceContainer=Bg,surfaceContainerHigh=Pale,surfaceContainerHighest=Pale,
             surfaceVariant=Pale,onSurfaceVariant=Subtle,outline=Color(0xFF99A18F),outlineVariant=Line,
             error=Color(0xFFAA4C48),onError=Color.White),
         typography=Typography(
-            headlineLarge=TextStyle(fontSize=32.sp,lineHeight=40.sp,fontWeight=FontWeight.Bold,letterSpacing=(-.6).sp),
-            headlineMedium=TextStyle(fontSize=27.sp,lineHeight=36.sp,fontWeight=FontWeight.SemiBold,letterSpacing=(-.4).sp),
+            headlineLarge=TextStyle(fontSize=34.sp,lineHeight=41.sp,fontWeight=FontWeight.Bold,letterSpacing=(-1).sp),
+            headlineMedium=TextStyle(fontSize=26.sp,lineHeight=33.sp,fontWeight=FontWeight.SemiBold,letterSpacing=(-.7).sp),
             titleLarge=TextStyle(fontSize=21.sp,lineHeight=29.sp,fontWeight=FontWeight.SemiBold),
             titleMedium=TextStyle(fontSize=18.sp,lineHeight=26.sp,fontWeight=FontWeight.SemiBold),
             bodyLarge=TextStyle(fontSize=16.sp,lineHeight=25.sp),

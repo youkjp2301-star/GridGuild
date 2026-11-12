@@ -31,7 +31,9 @@ class DemoPolishFlowTest {
     }
     @Test fun twoTimeSlotsAndOneClickMockChargeAwardExactlyOnce() {
         ui.onNodeWithTag("tab1").performClick()
-        ui.onNodeWithText("16:00 – 17:00").assertExists();ui.onNodeWithText("22:00 – 23:00").assertExists()
+        ui.onNodeWithTag("homeRecommendation").performScrollTo()
+        ui.onNodeWithText("16:00").assertIsDisplayed();ui.onNodeWithText("– 17:00").assertIsDisplayed()
+        ui.onNodeWithText("22:00").assertIsDisplayed();ui.onNodeWithText("– 23:00").assertIsDisplayed()
         ui.onNodeWithText("필요할 때 바로 충전").assertDoesNotExist()
         capture("home-times")
         ui.onNodeWithTag("homeSimulate").performScrollTo().performClick()

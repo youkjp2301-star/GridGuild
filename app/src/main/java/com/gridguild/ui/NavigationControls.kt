@@ -47,7 +47,7 @@ import java.time.format.DateTimeFormatter
         }
         else -> ""
     }
-    if(status.isNotBlank())Text(status,color=if(n.error)MaterialTheme.colorScheme.error else Green,modifier=Modifier.testTag("navStatus"))
+    if(status.isNotBlank())Text(status,color=if(n.error)MaterialTheme.colorScheme.error else GreenDark,modifier=Modifier.testTag("navStatus"))
     TextButton(onClick={tools=!tools},modifier=Modifier.testTag("navTools")) {
         Text(if(tools)"내비 연결 도구 접기" else "내비 연결 도구")
         Icon(if(tools)Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,null)

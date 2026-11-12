@@ -162,7 +162,7 @@ private val LeisureCategory.icon: ImageVector get()=when(this) {
         if(estimate==null)Text(missing,fontSize=14.sp,color=Subtle,modifier=Modifier.testTag("leisureEstimateReason"))
         else {
             Text("활동 ${(kotlin.math.floor(estimate.preciseMinutes).toInt()-ChargingLeisure.returnReserveMinutes).coerceAtLeast(0)}분 이하부터 추천해요.",
-                fontSize=15.sp,color=Green,modifier=Modifier.testTag("leisureTimeAdvice"))
+                fontSize=15.sp,color=GreenDark,modifier=Modifier.testTag("leisureTimeAdvice"))
             Text("복귀 여유 5분을 제외한 활동 기준 · 도보 시간 미확인",fontSize=14.sp,color=Subtle)
         }
     }

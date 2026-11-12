@@ -686,6 +686,45 @@
 - 간헐 Compose 테스트 Looper 예외와 이전 시스템 종료의 최초 원인, 실제 SDK 목적지 종단/장소·도보 API 등 기존 미완료는 유지한다. 도시 이미지는 기존 정지 가상 재구성 그대로이며 이번 작업에서 새 AI 이미지를 생성하지 않았다.
 - GitHub 원격/인증 미설정으로 push하지 않는다. 이번 소스·문서·DEV_LOG만 비밀정보 검사 후 로컬 커밋하고 병행 CHESTER의 기존24줄은 보존·커밋 제외한다. 로컬 SDK/설정·백업·원시 로그·APK/캡처는 Git에서 제외한다.
 
+## 2026-11-12 — 0.14.0 Premium Minimal Bento 전면 리디자인
+
+### 1. 현재까지 구현한 기능
+
+- 첨부9.70초 영상의19프레임을 확인하고, 밝은 배경/흰 면/제한적인 차콜/녹색과 비대칭 카드·숫자 중심 레이아웃으로 Home/HOME·ROUTE/내 도시/랭킹을 재구성했다. 기존 도시/1인칭 자산은 보존하고 새 AI 이미지나 실제 지도인 척하는 자산을 추가하지 않았다.
+- 공통 BentoCard/StatCard/SocGauge/AnimatedNumber/BentoProgress/StatusBadge/PrimaryButton/SectionHeader를 추가했다. 카드220ms·시차35ms,누름130ms,확장240ms,수치/진행450ms·보상600ms를 실제 상태에 연결하고 OS 모션 축소를 존중한다. XP 파티클·강한 그림자·반복 바운스를 제거했다.
+- Home에 SOC/저장 목표/오늘 미션/XP/도시 성장·큰 이미지/추천 충전소/지역 순위를 연결했다. HOME은 저장 목표·출발/두 모의 시간과 준비·50%진행·완료/도시 CTA를 제공하며 ROUTE는 선택 카드·현황·미션/완료·넓은 위치도를 제공한다. 좁은 화면은 하단 탐색, 넓은 화면은 좌측 탐색이다.
+- 순위는 기존 Rankings 결과를 사용하고 같은 범위의 실제 관측 전후만 표시한다. 필터/시즌/지역/모드 변경 시 관측을 초기화한다. 개인 XP와 모의 공동 랭킹 점수를 혼동하지 않도록 이름을 구분하며 목표/ETA/순위변동을 만들지 않는다.
+- 실제 발견한 HOME/ROUTE CTA 복원 오류는 단발 이동 요청ID로 수정했다. 일반 탭 복귀의 선택 상태는 유지한다. 읽기 검수에서 발견한 클릭 카드의 정보 태그 흡수와 stale SOC 권고도 보완했다. 목표null·현재모드출처·신선도와 기존 가드/원장을 유지한다.
+- Aside 사용성 보조검토6항목을 반영했다. 실제 앱 시각검수는 root가 직접 수행했다. 토큰 대비 계산은 본문/녹색버튼7.95:1,보조/배경4.72:1,진녹색/연녹색5.16:1이다.
+
+### 2. Pleos SDK 연동 완료·미완료
+
+- core·ViewModel·Repository·DataStore schema·SDK 의존 버전은 변경하지 않았다. Vehicle2.3.2/NaviHelper3.0.5와 기존 typed 요청/콜백·보상·저장·도시 잠금·P단/CarUxRestrictions를 보존했다. 이번 결과는 UI/Mock 회귀 검증이며 실제 서비스 SDK 성공을 추가 주장하지 않는다.
+- 실제 Navi 목적지 종단/충전소·장소·도보·전력망 API/실제 N 자동 진입/쿠폰·소비 포인트 등 기존 미완료는 그대로다. 샘플/가상 장소/광고 및 출처 안내를 유지했다.
+
+### 3. 변경된 주요 파일
+
+- 새 BentoComponents.kt/HomeDashboard.kt/BentoRankingScreen.kt와 GridTheme.kt/CityMotion.kt: 토큰/공통 컴포넌트·모션·대시보드·순위.
+- GridGuildApp.kt/HomeChargeScreen.kt/CityCollectionScreen.kt/ChargingAvailabilityView.kt/ChargingLeisureSheet.kt/NavigationControls.kt/NearbyStationMap.kt: 화면 통합·이동요청·준비/진행/완료·선택/현황·큰 도시/위치도.
+- BentoDashboardFlowTest.kt(새4검사),ChargingAvailabilityFlowTest.kt,DemoPolishFlowTest.kt,VisualAppFlowTest.kt: 실제 상태·원장/재생성·CTA/랭킹·표시/스크롤 회귀. app/build.gradle.kts는0.14.0/code15다.
+- PRD20절/README/TEST_REPORT 및 새 docs/design/BENTO_UI.md: 요구사항·토큰/모션/출처·실제 검증·최종 설치 경로. 전체 변경22파일이며 기존 병행 CHESTER24줄은 보존·커밋 제외한다.
+
+### 4. 빌드 및 테스트 결과
+
+- core96개 실패/오류0. 첫 APK/테스트/core/Lint54초 성공. 중간 레이아웃 보완의 maxWidth DSL receiver 오류1회를 명시 변수로 수정했고 이후32초 성공. 최종 표기 정리 후 동일4작업31초 성공, Lint0오류/기존14경고다.
+- 첫360dp 신규3개44.971초에2통과/1실패로 실제 CTA 복원 오류를 발견·수정했다. 이후 모바일27개202.354초26통과/1실패였고, 실패는 기존 긴 경유지 문구를 기다리던 검사였다. 새 요청ID/WAYPOINT/confirmed/현재 문구를 검증하도록 보완했다.
+- 가로1280×800의11개104.137초9통과/2실패. 새 랭킹 변화/범위리셋 포함4개·샘플 분포·보완한 경유지·SDK미확인·N안전은 통과했다. 추천시간 검사는 시작/종료 Text 분리에 맞춰 보완했고 N 양방향 검사는 가로override와 자연패널 전제가 달라 진입 전 실패한 것으로 구분했다.
+- 정상 패널/360dp로 재실행한 신규4+두시간/원클릭1+N양방향1이78.942초6개 모두 통과했다. 최종 APK의 랭킹 점수 표기 보완 후 실제 순위 변화/필터 리셋 단독1개도13.927초 통과했다. 고유33개를 여러 실행에서 확인한 범위이며 전체72개 일괄 성공이 아니다.
+- 실제 ON+43%에서50%진행/XP0,44%에서 개인/도시120XP·Lv2·완료, 재생성/오늘 중복 차단, D/UX에서화면·CTA숨김/원장보존, 기존Route·경유지·호환/네현황·가용0·도시잠금·보상재생방지·입력비차단을 확인했다. 모바일/가로 정상 캡처를 직접 검토했다.
+- 기존 QA를1회 실행했으며 재부팅·재생성·wipe/앱데이터 삭제 없이 사용했다. 수집event의am_anr/am_crash0건·앱 AndroidRuntime FATAL없음. QA 진행191fdbdcae7323ead5f53ced0bacb248c205e71cd1b9d574226f8e91b0356631과 원래 해상도/밀도/자동회전1·사용자회전0을 복원했다.
+- 원본5554에 이전 설치APK/진행을 앱 내부·PC로 백업한 뒤 최종0.14.0/code15를 install -r했다. 실제 Home·설치base.apk확인 후에도 진행SHA2565d93202a8f7a74516b89e1797f028ff97243c6b1f26f2c4c48ab13fe2fd46dcb 동일했다. 원본에 fixture·레벨/XP 조작은 하지 않았다.
+- 전달 APK는 artifacts/bento-v014/release/GridGuild-0.14.0-debug.apk, SHA256cd26fa4da622d0a203ee81c4da0edd57384bf02523e728d9c0e8625140e8c76b이며 두 기기 실제base.apk와 일치한다. 이전 버전과 중간 검수 APK도 보존했다. 캡처는 verified/mobile·wide 및 release/screens/에 있다.
+
+### 5. 남아 있는 오류와 다음 개발 작업
+
+- 실제 SDK 종단/실제 장소·충전기 API 등 이전 미연동, 원본 AVD의 논리PORT/N여백·시스템 종료 최초 원인, 이전 간헐 Compose Looper 예외는 이번 UI 검증만으로 해결되었다고 주장하지 않는다. 정사각 패널·모든 기기/글자배율 조합과 전체72개 일괄 검사는 미실행이다.
+- GitHub 원격/인증 미설정으로 push는 하지 않는다. UI·테스트·문서만 로컬 커밋하며 도구/영상프레임/백업/원시로그/APK/캡처와 기존 병행24줄은 제외한다. 커밋 전 실제index 비밀정보 및 diff 검사를 수행한다.
+
 ## 작업 종료 시 갱신 양식
 
 아래 다섯 항목을 실제 결과로 작성하고 관련 코드와 같은 커밋에 포함한다.

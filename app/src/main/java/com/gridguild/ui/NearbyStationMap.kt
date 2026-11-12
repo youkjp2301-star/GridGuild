@@ -24,7 +24,7 @@ import kotlin.math.cos
 /** Local coordinate plot of sample locations; deliberately has no road tiles or routing lines. */
 @Composable internal fun NearbyStationMap(lat: Double,lon: Double,nearby: List<NearbyStation>) {
     Text("주변 샘플 위치 · 목적지 반경 5 km",fontSize=14.sp,color=Ink)
-    Canvas(Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF0F5F5))
+    Canvas(Modifier.fillMaxWidth().height(260.dp).clip(RoundedCornerShape(20.dp)).background(Pale)
         .testTag("nearbyMap").semantics {
             contentDescription="목적지 중심 반경 5 km, 가상 충전소 ${nearby.size}곳. "+nearby.mapIndexed { i,it -> "${i+1}번 ${it.station.name} 직선 %.1f km".format(java.util.Locale.KOREA,it.distanceKm) }.joinToString(", ")+". 도로 지도 및 실제 시설 아님"
         }) {
@@ -50,7 +50,7 @@ import kotlin.math.cos
             } else actual
             if(point!=actual) { drawLine(Green.copy(alpha=.45f),actual,point,1.dp.toPx());drawCircle(Green,3.dp.toPx(),actual) }
             drawCircle(Color.White,16.dp.toPx(),point);drawCircle(Green,13.dp.toPx(),point)
-            paint.color=Color.White.toArgb();drawContext.canvas.nativeCanvas.drawText("${index+1}",point.x,point.y+4.dp.toPx(),paint)
+            paint.color=Ink.toArgb();drawContext.canvas.nativeCanvas.drawText("${index+1}",point.x,point.y+4.dp.toPx(),paint)
         }
         paint.color=Ink.toArgb();drawContext.canvas.nativeCanvas.drawText("목적지",center.x,center.y+30.dp.toPx(),paint)
         paint.textAlign=Paint.Align.LEFT;drawContext.canvas.nativeCanvas.drawText("N ↑",16.dp.toPx(),25.dp.toPx(),paint)

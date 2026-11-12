@@ -54,6 +54,10 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
         if(ready && allowed && game.districtId!=null)preloadCityArt(resources,unlocked,unlocked)
     }
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    var openRoute by rememberSaveable { mutableStateOf(false) }
+    var openRegional by rememberSaveable { mutableStateOf(false) }
+    var missionRequest by rememberSaveable { mutableIntStateOf(0) }
+    var rankingRequest by rememberSaveable { mutableIntStateOf(0) }
     var controls by rememberSaveable { mutableStateOf(false) }
     var modeInfo by rememberSaveable { mutableStateOf(false) }
     var parkingScreenShown by rememberSaveable { mutableStateOf(false) }
@@ -73,14 +77,15 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
             val wide=maxWidth>=840.dp
             val compact=maxWidth<600.dp
             Column(Modifier.fillMaxSize()) {
-                Row(Modifier.fillMaxWidth().background(Paper.copy(alpha=.95f)).padding(horizontal=if(compact)16.dp else 26.dp,vertical=14.dp),verticalAlignment=Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().background(Paper).padding(horizontal=16.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
                     if(!compact) {
-                        Surface(color=Ink,shape=RoundedCornerShape(12.dp)) { Icon(Icons.Outlined.Bolt,null,tint=Color.White,modifier=Modifier.padding(8.dp).size(24.dp)) }
+                        Surface(color=Charcoal,shape=RoundedCornerShape(12.dp)) { Icon(Icons.Outlined.Bolt,null,tint=Green,modifier=Modifier.padding(8.dp).size(24.dp)) }
                         Spacer(Modifier.width(12.dp))
                     }
                     Column(verticalArrangement=Arrangement.spacedBy(2.dp)) {
-                        Text("GRIDGUILD",fontSize=if(compact)18.sp else 21.sp,fontWeight=FontWeight.Bold,letterSpacing=1.1.sp)
-                        if(!compact)Text("충전으로 함께 자라는 도시",fontSize=11.sp,color=Subtle)
+                        Text("GridGuild",fontSize=20.sp,fontWeight=FontWeight.Bold,letterSpacing=(-.6).sp)
+                        Text(if(reading.fresh && reading.vehicle.source==if(game.mode==AppMode.MOCK)DataSource.MOCK else DataSource.PLEOS)
+                            if(game.mode==AppMode.MOCK)"체험 차량 연결됨" else "차량 연결됨" else "차량 확인 중",fontSize=11.sp,color=Subtle)
                     }
                     Spacer(Modifier.weight(1f))
                     AssistChip(onClick={modeInfo=true},enabled=platformAllowed,
@@ -89,7 +94,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                         shape=RoundedCornerShape(12.dp),border=BorderStroke(1.dp,Line),
                         colors=AssistChipDefaults.assistChipColors(containerColor=Bg,labelColor=Blue,leadingIconContentColor=Blue),
                         modifier=Modifier.heightIn(min=48.dp).testTag("modeInfo"))
-                    Spacer(Modifier.width(16.dp))
+                    Spacer(Modifier.width(8.dp))
                     if(platformAllowed) {
                         if(compact) IconButton(onClick={controls=!controls},modifier=Modifier.testTag("settings")) { Icon(Icons.Outlined.Tune,"연결 · 테스트") }
                         else TextButton(onClick={controls=!controls},modifier=Modifier.testTag("settings")) { Icon(Icons.Outlined.Tune,null);Spacer(Modifier.width(6.dp));Text("연결 · 테스트") }
@@ -105,21 +110,24 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                 }
                 else if(game.districtId==null) Onboarding(model)
                 else Row(Modifier.weight(1f)) {
-                    if(wide) Column(Modifier.fillMaxHeight().width(130.dp).background(Paper.copy(alpha=.92f)).padding(12.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                    if(wide) Column(Modifier.fillMaxHeight().width(104.dp).background(Paper).padding(8.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                         Spacer(Modifier.height(12.dp))
                         tabs.forEachIndexed { i,label -> GuildNavItem(label,tabIcons[i],tab==i,true,"tab$i"){tab=i} }
                     }
                     Column(Modifier.weight(1f)) {
-                        if(!wide) Row(Modifier.fillMaxWidth().background(Paper.copy(alpha=.94f)).padding(8.dp),horizontalArrangement=Arrangement.SpaceEvenly) {
-                            tabs.forEachIndexed { i,label -> GuildNavItem(label,tabIcons[i],tab==i,false,"tab$i"){tab=i} }
-                        }
-                        GuildPage(tab,Modifier.weight(1f).padding(if(wide)24.dp else 16.dp)) { destination ->
+                        GuildPage(tab,Modifier.weight(1f).padding(16.dp)) { destination ->
                             when(destination) {
-                                0 -> HomeScreen(game,reading,navi,now) { tab=1 }
-                                1 -> MissionScreen(game,reading,navi,now,model)
+                                0 -> HomeDashboard(game,reading,navi,now,model,
+                                    onMission={openRoute=game.mission?.kind==MissionKind.ROUTE;missionRequest++;tab=1},
+                                    onRoute={openRoute=true;missionRequest++;tab=1},
+                                    onCity={tab=2},onRanking={openRegional=true;rankingRequest++;tab=3})
+                                1 -> MissionScreen(game,reading,navi,now,model,openRoute,missionRequest){tab=2}
                                 2 -> CityScreen(game)
-                                3 -> RankingScreen(game,now)
+                                3 -> BentoRankingScreen(game,now,openRegional,rankingRequest)
                             }
+                        }
+                        if(!wide) Row(Modifier.fillMaxWidth().background(Paper).padding(horizontal=8.dp,vertical=5.dp),horizontalArrangement=Arrangement.SpaceEvenly) {
+                            tabs.forEachIndexed { i,label -> GuildNavItem(label,tabIcons[i],tab==i,false,"tab$i"){tab=i} }
                         }
                     }
                 }
@@ -151,17 +159,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
     Spacer(Modifier.height(6.dp));Text(subtitle,color=Subtle,fontSize=14.sp);Spacer(Modifier.height(24.dp))
 }
 @Composable internal fun Panel(modifier: Modifier=Modifier,content: @Composable ColumnScope.()->Unit) {
-    Surface(modifier,shape=RoundedCornerShape(24.dp),color=Paper,border=BorderStroke(1.dp,Line),shadowElevation=1.dp) {
-        Column(Modifier.padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp),content=content)
-    }
-}
-@Composable private fun Metric(label: String,value: String,icon: ImageVector) {
-    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-        Surface(color=if(icon==Icons.Outlined.Bolt)Gold.copy(alpha=.12f) else Pale,shape=RoundedCornerShape(14.dp)) {
-            Icon(icon,null,tint=if(icon==Icons.Outlined.Bolt)Gold else Blue,modifier=Modifier.padding(11.dp).size(25.dp))
-        }
-        Column(verticalArrangement=Arrangement.spacedBy(3.dp)) { Text(label,color=Subtle,fontSize=13.sp);Text(value,fontWeight=FontWeight.Bold,fontSize=30.sp,letterSpacing=(-.5).sp) }
-    }
+    BentoCard(modifier=modifier,content=content)
 }
 @Composable private fun Onboarding(model: GridViewModel) {
     var selected by rememberSaveable { mutableStateOf("sasang") }
@@ -236,63 +234,22 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
         else TextButton(onClick={model.setMode(AppMode.MOCK)}){Text("SDK 사용 불가 · MOCK 모드 선택")}
     }
 }
-@Composable private fun HomeScreen(g: GameState,reading: VehicleReading,n: NavigationState,now: Long,onMission:()->Unit) {
-    val v=reading.vehicle
-    val d=Busan.find(g.districtId)!!;val xp=g.cityXp(d.id);val level=CityLevels.level(xp)
-    Column(Modifier.verticalScroll(rememberScrollState())) {
-        Text("CHARGE THE FUTURE",fontSize=11.sp,letterSpacing=2.sp,color=Green,fontWeight=FontWeight.SemiBold)
-        Spacer(Modifier.height(6.dp))
-        Section("좋은 충전이 만드는, ${d.name}의 내일","오늘도 내 도시가 한 뼘 자랍니다.")
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val city: @Composable ()->Unit = {
-            Panel(Modifier.fillMaxWidth()) {
-                Row(verticalAlignment=Alignment.CenterVertically) { BadgeText("Lv.$level · ${CityLevels.names[level-1]}");Spacer(Modifier.weight(1f));Text(d.name,fontWeight=FontWeight.Bold) }
-                CityCanvas(level,d.id,level,Modifier.fillMaxWidth().aspectRatio(2f).testTag("homeCityHero"))
-                Row(verticalAlignment=Alignment.CenterVertically) {
-                    Text("지역 성장 · $xp XP",fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
-                    Text("MY CITY",fontSize=10.sp,letterSpacing=1.8.sp,color=Green)
-                }
-                LinearProgressIndicator(progress={CityLevels.progress(xp)},modifier=Modifier.fillMaxWidth().height(7.dp),color=Green,trackColor=SoftGreen)
-                Text(if(level==12) "최고 레벨 달성" else "다음 레벨까지 ${CityLevels.thresholds[level]-xp} XP",color=Subtle,fontSize=14.sp)
-            } }
-            val metrics: @Composable ()->Unit = {
-            BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val battery: @Composable (Modifier)->Unit = { card -> Panel(card) {
-                    Metric("EV 배터리",if(reading.fresh)"${v.soc?.toInt() ?: "—"}%" else "—%",Icons.Outlined.BatteryChargingFull)
-                    LinearProgressIndicator(progress={if(reading.fresh)(v.soc ?: 0f)/100f else 0f},modifier=Modifier.fillMaxWidth().height(5.dp),color=Green,trackColor=Bg)
-                    Text(if(reading.fresh)"충전 스위치 ${v.chargeSwitch}" else "충전 상태 확인 중",fontSize=14.sp,
-                        color=if(reading.fresh)Green else Subtle,modifier=Modifier.testTag("batteryStatus"))
-                } }
-                val points: @Composable (Modifier)->Unit = { card -> Panel(card) {
-                    Metric("내 누적 XP","${g.xp} XP",Icons.Outlined.Bolt)
-                    Text("이번 시즌 ${g.seasonXp(now)} XP",color=Subtle)
-                    Button(onClick=onMission,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth().heightIn(min=54.dp)) { Icon(Icons.Outlined.EvStation,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text("충전 미션 참여하기") }
-                } }
-                if(maxWidth>=600.dp) Row(horizontalArrangement=Arrangement.spacedBy(16.dp)) {battery(Modifier.weight(1f));points(Modifier.weight(1f))}
-                else Column(verticalArrangement=Arrangement.spacedBy(16.dp)){battery(Modifier.fillMaxWidth());points(Modifier.fillMaxWidth())}
-            } }
-            if(maxWidth>=1040.dp) Row(horizontalArrangement=Arrangement.spacedBy(20.dp)) {
-                Box(Modifier.weight(2.6f)){city()};Box(Modifier.weight(1f)){metrics()}
-            } else Column(verticalArrangement=Arrangement.spacedBy(18.dp)) { city();metrics() }
-        }
-        Spacer(Modifier.height(16.dp));Text(if(n.hasDestination)"목적지 ${destinationName(n.destination)}" else "목적지를 선택하세요",
-            color=Ink,fontSize=20.sp,fontWeight=FontWeight.SemiBold)
-    }
-}
-@Composable private fun MissionScreen(g: GameState,reading: VehicleReading,n: NavigationState,now: Long,model: GridViewModel) {
-    var home by rememberSaveable { mutableStateOf(true) }
-    Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+@Composable private fun MissionScreen(g: GameState,reading: VehicleReading,n: NavigationState,now: Long,model: GridViewModel,initialRoute:Boolean=false,requestId:Int=0,onCity:()->Unit) {
+    var home by rememberSaveable { mutableStateOf(!initialRoute) }
+    var appliedRequest by rememberSaveable { mutableIntStateOf(-1) }
+    LaunchedEffect(requestId){if(appliedRequest!=requestId){home=!initialRoute;appliedRequest=requestId}}
+    Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
             FilterChip(selected=home,onClick={home=true},label={Text("HOME CHARGE")},modifier=Modifier.heightIn(min=48.dp).testTag("homeCharge"))
             FilterChip(selected=!home,onClick={home=false},label={Text("ROUTE CHARGE")},modifier=Modifier.heightIn(min=48.dp).testTag("routeCharge"))
         }
         Box(Modifier.weight(1f)) {
-            if(home) HomeChargeScreen(g,reading,now,model)
-            else RouteChargeScreen(g,reading,n,now,model)
+            if(home) HomeChargeScreen(g,reading,now,model,onCity)
+            else RouteChargeScreen(g,reading,n,now,model,onCity)
         }
     }
 }
-@Composable private fun RouteChargeScreen(g: GameState,reading: VehicleReading,n: NavigationState,now: Long,model: GridViewModel) {
+@Composable private fun RouteChargeScreen(g: GameState,reading: VehicleReading,n: NavigationState,now: Long,model: GridViewModel,onCity:()->Unit) {
     val v=reading.vehicle
     val starting by model.startingMission.collectAsStateWithLifecycle()
     val availability by model.chargerAvailability.collectAsStateWithLifecycle()
@@ -300,25 +257,26 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
     val compatible=if(g.mode==AppMode.MOCK)setOf(connector) else null
     var connectorDialog by remember{mutableStateOf(false)}
     var stationOptions by rememberSaveable{mutableStateOf(false)}
+    var selectedStationId by rememberSaveable(n.lat,n.lon){mutableStateOf<String?>(null)}
     val allowed by model.gameAllowed.collectAsStateWithLifecycle()
     var leisureStationId by remember(g.mode){mutableStateOf<String?>(null)}
     val availabilityNow=System.currentTimeMillis().coerceAtLeast(now)
     val listState=rememberLazyListState()
     LaunchedEffect(g.mission?.id) { if(g.mission!=null) listState.animateScrollToItem(0) }
-    val recommendations=ChargingRecommendations.around(n.lat,n.lon,v.soc,availability=availability,observedAt=availabilityNow,compatible=compatible)
+    val recommendations=ChargingRecommendations.around(n.lat,n.lon,v.soc.takeIf{reading.fresh},availability=availability,observedAt=availabilityNow,compatible=compatible)
     val stations=recommendations.nearby.map{it.station}
     val leisureStation=stations.firstOrNull{it.id==leisureStationId}
     LaunchedEffect(allowed,stations.map{it.id}) {
         if(!allowed || leisureStation==null)leisureStationId=null
     }
-    LazyColumn(state=listState,modifier=Modifier.testTag("missionList"),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-        item { Section("충전 미션","내 이동에 맞는 충전으로, 도시의 다음 단계를 준비해요.") }
-        item { Panel(Modifier.fillMaxWidth()) {
+    LazyColumn(state=listState,modifier=Modifier.testTag("missionList"),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        item { SectionHeader("이동 중 충전","ROUTE CHARGE") }
+        item { BentoCard(Modifier.fillMaxWidth(),BentoTone.SUBTLE) {
             Text(if(reading.fresh)"SOC ${v.soc?.toInt() ?: "—"}% · 충전 스위치 ${v.chargeSwitch}" else "SOC — · 충전 상태 확인 중",
                 fontWeight=FontWeight.Bold,fontSize=20.sp)
             NavigationControls(n,g.mode==AppMode.MOCK,model::refreshNavigation,model::reroute,model::changeDemoDestination,model::randomDemoDestination)
         } }
-        item { Panel(Modifier.fillMaxWidth()) {
+        item { Column(Modifier.fillMaxWidth().padding(vertical=4.dp)) {
             Row(verticalAlignment=Alignment.CenterVertically) {
                 Text(if(recommendations.status==RecommendationStatus.HIGH_SOC)"충전 추천 중지" else "목적지 주변 충전소 · ${stations.size}곳",fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f).testTag("nearbySummary"))
                 IconButton(onClick=model::refreshChargerAvailability,modifier=Modifier.testTag("refreshAvailability")){Icon(Icons.Outlined.Refresh,"데모 상태 새로고침")}
@@ -339,16 +297,29 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                 }
             }
         } }
-        g.mission?.let { m -> item { Panel(Modifier.fillMaxWidth().testTag("activeMission")) {
-            Text(if(m.kind==MissionKind.HOME)"우리 집 충전 참여 중" else "미션 진행 중",fontWeight=FontWeight.Bold,color=Blue)
-            Text(if(m.kind==MissionKind.HOME)g.homeCharge.chargerName ?: "우리 집 충전" else SampleData.stations.firstOrNull{it.id==m.stationId}?.name ?: "충전 미션",fontWeight=FontWeight.SemiBold)
-            Text("목적지를 변경해도 이미 시작한 미션은 유지됩니다.",fontSize=13.sp,color=Subtle)
+        g.mission?.let { m -> item { BentoCard(Modifier.fillMaxWidth().testTag("activeMission"),BentoTone.DARK) {
+            Text(if(m.kind==MissionKind.HOME)"우리 집 충전 참여 중" else "미션 진행 중",fontWeight=FontWeight.Medium,color=Green,fontSize=13.sp)
+            Text(if(m.kind==MissionKind.HOME)g.homeCharge.chargerName ?: "우리 집 충전" else SampleData.stations.firstOrNull{it.id==m.stationId}?.name ?: "충전 미션",fontWeight=FontWeight.SemiBold,fontSize=24.sp,color=Color.White)
             val baseline=if(m.kind==MissionKind.HOME)m.windowBaselineSoc else m.baselineSoc
-            Text(if(baseline==null)"미션 시간 시작 후 배터리를 자동 확인합니다." else "시작 SOC ${baseline.toInt()}% → 완료 조건 ${(baseline+m.requiredGain).toInt()}% · 충전 ON + SOC 2%p 증가")
-            LinearProgressIndicator(progress={m.progress},modifier=Modifier.fillMaxWidth(),trackColor=Pale)
-            Text("${(m.progress*100).toInt()}% · 조건 달성 시 자동 완료",fontSize=14.sp,color=Subtle)
-            TextButton(onClick=model::cancelMission){Text("미션 취소")}
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                Text(if(reading.fresh)"현재 ${v.soc?.toInt() ?: "—"}%" else "차량 확인 중",fontSize=21.sp,color=Color.White)
+                Text(baseline?.let{"완료 기준 ${(it+m.requiredGain).toInt()}%"} ?: "충전 시간 대기",fontSize=16.sp,color=OnDarkMuted)
+            }
+            BentoProgress(m.progress)
+            Text("${(m.progress*100).toInt()}% · 충전 ON + SOC ${m.requiredGain.toInt()}%p · 완료 시 +${m.reward} XP",fontSize=13.sp,color=OnDarkMuted)
+            TextButton(onClick=model::cancelMission,colors=ButtonDefaults.textButtonColors(contentColor=Color.White),modifier=Modifier.heightIn(min=48.dp)){Text("미션 취소")}
         } } }
+        if(g.mission==null)g.completionHistory.lastOrNull{it.kind=="MISSION" && GameState.day(it.at)==GameState.day(now)}?.let{award->
+            item { BentoCard(Modifier.fillMaxWidth().testTag("routeSuccess"),BentoTone.GREEN) {
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Outlined.CheckCircle,null,tint=GreenDark);Text("충전 미션 완료",fontSize=19.sp,fontWeight=FontWeight.SemiBold)
+                }
+                AnimatedNumber(if(award.personalCredit)award.xp else 0,prefix="+",suffix=" XP",fontSize=36.sp)
+                Text("도시 성장 · ${g.cityXp(g.districtId)} XP",fontSize=14.sp,color=Subtle)
+                BentoProgress(CityLevels.progress(g.cityXp(g.districtId)))
+                TextButton(onCity,Modifier.heightIn(min=48.dp)){Text("내 도시 보기")}
+            } }
+        }
         items(recommendations.nearby,key={it.station.id}) { candidate ->
             val station=candidate.station
             val done=g.completedToday(station.id,now)
@@ -368,22 +339,23 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                 !reading.fresh || !correctSource -> "차량 정보 확인 필요"
                 else -> "미션 시작"
             }
-            Panel(Modifier.fillMaxWidth()) {
+            val selected=selectedStationId==station.id
+            BentoCard(Modifier.fillMaxWidth().testTag("stationCard-${station.id}"),
+                tone=if(selected)BentoTone.GREEN else BentoTone.SURFACE,index=stations.indexOf(station).coerceAtMost(5),onClick={selectedStationId=station.id}) {
+                if(stations.firstOrNull()==station)StatusBadge("추천 충전소",Green)
                 Row(verticalAlignment=Alignment.CenterVertically) {
-                    Surface(color=SoftGreen,shape=RoundedCornerShape(14.dp)){Icon(Icons.Outlined.EvStation,null,tint=Green,modifier=Modifier.padding(12.dp).size(26.dp))};Spacer(Modifier.width(14.dp))
+                    Surface(color=if(selected)Paper else Pale,shape=RoundedCornerShape(12.dp)){Icon(Icons.Outlined.EvStation,null,tint=GreenDark,modifier=Modifier.padding(10.dp).size(22.dp))};Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("${stations.indexOf(station)+1}. ${station.name}",fontSize=20.sp,fontWeight=FontWeight.Bold)
-                        Text("${Busan.find(station.districtId)?.name} · "+if(station.hourStart==0 && station.hourEnd==24)"미션 상시 참여" else "미션 ${station.windowLabel}",color=Subtle)
-                        Text(station.connectors.joinToString(" / "){it.label}+" · "+if(candidate.detourKm!=null)"이탈 %.1f km".format(java.util.Locale.KOREA,candidate.detourKm) else "목적지 직선 %.1f km".format(java.util.Locale.KOREA,candidate.distanceKm),fontSize=14.sp,color=Subtle)
+                        Text("${stations.indexOf(station)+1}. ${station.name}",fontSize=19.sp,fontWeight=FontWeight.SemiBold)
+                        Text("${Busan.find(station.districtId)?.name} · "+if(station.hourStart==0 && station.hourEnd==24)"미션 상시 참여" else "미션 ${station.windowLabel}",color=Subtle,fontSize=12.sp)
                     }
-                    BadgeText("+${station.xp} XP",Gold)
+                    BadgeText("+${station.xp} XP",GreenDark)
                 }
+                Text(station.connectors.joinToString(" / "){it.label}+" · "+if(candidate.detourKm!=null)"이탈 %.1f km".format(java.util.Locale.KOREA,candidate.detourKm) else "목적지 직선 %.1f km".format(java.util.Locale.KOREA,candidate.distanceKm),fontSize=13.sp,color=Subtle)
                 ChargerAvailabilityInfo(candidate,g.mode==AppMode.MOCK){scenario->model.setDemoAvailability(station.id,scenario)}
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    Button(onClick={model.startMission(station)},enabled=canStart,shape=RoundedCornerShape(14.dp),modifier=Modifier.width(200.dp).heightIn(min=56.dp).testTag("mission-${station.id}")) {
-                        if(starting==station.id) { CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(8.dp)) }
-                        Text(buttonLabel)
-                    }
+                    PrimaryButton(buttonLabel,onClick={model.startMission(station)},enabled=canStart,loading=starting==station.id,
+                        modifier=Modifier.widthIn(min=160.dp).testTag("mission-${station.id}"))
                     OutlinedButton(onClick={model.addWaypoint(station)},enabled=!n.pending,modifier=Modifier.heightIn(min=52.dp).testTag("waypoint-${station.id}")) { Text("경유지 추가") }
                     TextButton(onClick={model.setDestination(station)},enabled=!n.pending,modifier=Modifier.testTag("destination-${station.id}")){Text("목적지 설정")}
                 }
@@ -404,10 +376,10 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
             }
         }
         if(n.hasDestination && recommendations.status!=RecommendationStatus.HIGH_SOC) item {
-            Panel(Modifier.fillMaxWidth()) { NearbyStationMap(n.lat!!,n.lon!!,recommendations.nearby) }
+            Column(Modifier.fillMaxWidth().padding(vertical=8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { NearbyStationMap(n.lat!!,n.lon!!,recommendations.nearby) }
         }
         items(g.completionHistory.takeLast(5).reversed()) { e ->
-            Text("개인 +${if(e.personalCredit)e.xp else 0} · 도시 +${if(e.cityCredit)e.xp else 0} XP · ${GameState.day(e.at)} · ${if(e.kind=="DAILY") "일일 보너스" else "충전 성과"}",color=Green)
+            Text("개인 +${if(e.personalCredit)e.xp else 0} · 도시 +${if(e.cityCredit)e.xp else 0} XP · ${GameState.day(e.at)} · ${if(e.kind=="DAILY") "일일 보너스" else "충전 성과"}",color=GreenDark)
         }
     }
     if(connectorDialog && g.mode==AppMode.MOCK)AlertDialog(onDismissRequest={connectorDialog=false},title={Text("데모 차량 커넥터")},
@@ -421,27 +393,4 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
 }
 @Composable private fun CityScreen(g: GameState) {
     CityCollectionScreen(g)
-}
-@Composable private fun RankingScreen(g: GameState,now: Long) {
-    var cities by rememberSaveable { mutableStateOf(false) }
-    var monthly by rememberSaveable { mutableStateOf(true) }
-    val sorted=if(cities)Rankings.cities(g,now,monthly) else Rankings.personal(g,now,monthly)
-    LazyColumn(verticalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.testTag("rankingList")) {
-        item { Section("함께 만드는 순위","${GameState.season(now)} 시즌 · 샘플 랭킹 · 내 성과 반영") }
-        item { Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            FilterChip(selected=!cities,onClick={cities=false},label={Text("개인 랭킹")})
-            FilterChip(selected=cities,onClick={cities=true},label={Text("지역 랭킹")})
-            FilterChip(selected=monthly,onClick={monthly=!monthly},label={Text(if(monthly) "월간 시즌" else "누적 성과")})
-        } }
-        item { BadgeText("내 순위 ${sorted.indexOfFirst{it.mine}+1}위 · 데모") }
-        items(sorted.size) { index -> val row=sorted[index]
-            Surface(color=if(row.mine)Pale else Color.White,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(22.dp),verticalAlignment=Alignment.CenterVertically) {
-                    Text("%02d".format(index+1),fontSize=24.sp,fontWeight=FontWeight.Bold,color=Blue,modifier=Modifier.width(60.dp))
-                    Column(Modifier.weight(1f)) { Text(row.name+(if(row.mine && cities)" · 내 소속" else ""),fontWeight=FontWeight.Bold,fontSize=18.sp);if(cities)Text("Lv.${CityLevels.level(row.xp)} · 모의 공동 점수",fontSize=16.sp,color=Subtle) }
-                    Text("${row.xp} XP",fontSize=22.sp,fontWeight=FontWeight.Bold)
-                }
-            }
-        }
-    }
 }

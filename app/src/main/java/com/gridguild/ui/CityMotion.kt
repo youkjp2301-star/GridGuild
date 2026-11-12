@@ -45,18 +45,19 @@ import kotlin.math.roundToInt
     val hovered by interactions.collectIsHoveredAsState()
     val focused by interactions.collectIsFocusedAsState()
     val pressed by interactions.collectIsPressedAsState()
-    val fill by animateColorAsState(if(selected)SoftGreen else if(hovered || focused)Pale else Color.Transparent,tween(160),label="navigationFill")
-    val scale by animateFloatAsState(if(pressed).96f else 1f,spring(dampingRatio=.65f,stiffness=650f),label="navigationPress")
+    val motion=motionEnabled()
+    val fill by animateColorAsState(if(selected)Charcoal else if(hovered || focused)Pale else Color.Transparent,tween(if(motion)160 else 0),label="navigationFill")
+    val scale by animateFloatAsState(if(pressed).97f else 1f,tween(if(motion)130 else 0),label="navigationPress")
     Column(Modifier.then(if(wide)Modifier.fillMaxWidth() else Modifier.widthIn(min=64.dp))
         .heightIn(min=64.dp).graphicsLayer{scaleX=scale;scaleY=scale}
-        .clip(RoundedCornerShape(22.dp)).background(fill)
-        .border(if(focused)2.dp else 1.dp,if(focused)Green else if(selected)Line else Color.Transparent,RoundedCornerShape(22.dp))
+        .clip(RoundedCornerShape(18.dp)).background(fill)
+        .border(if(focused)2.dp else 1.dp,if(focused)GreenDark else Color.Transparent,RoundedCornerShape(18.dp))
         .hoverable(interactions).selectable(selected=selected,interactionSource=interactions,indication=LocalIndication.current,role=Role.Tab,onClick=onClick)
         .testTag(tag).semantics{stateDescription=if(pressed)"누름" else if(hovered)"가리킴" else if(selected)"선택됨" else "대기"}
         .padding(horizontal=16.dp,vertical=10.dp),
         horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)) {
         Icon(icon,null,tint=if(selected)Green else Subtle,modifier=Modifier.size(23.dp))
-        Text(label,fontSize=13.sp,color=if(selected)Ink else Subtle,fontWeight=if(selected)FontWeight.SemiBold else FontWeight.Normal)
+        Text(label,fontSize=12.sp,color=if(selected)Color.White else Subtle,fontWeight=if(selected)FontWeight.SemiBold else FontWeight.Normal)
     }
 }
 
@@ -119,7 +120,7 @@ internal suspend fun holdLoadingMinimum(started: Long) = withContext(Dispatchers
             if(allowed && award.cityTotal<=latestXp()) {
                 progress.snapTo(0f);event=award
                 try {
-                    if(moving)progress.animateTo(1f,tween(1200,easing=LinearOutSlowInEasing)) else progress.snapTo(1f)
+                    if(moving)progress.animateTo(1f,tween(600,easing=LinearOutSlowInEasing)) else progress.snapTo(1f)
                     delay(if(moving)1300 else 900)
                 } finally { event=null }
             }
@@ -135,31 +136,18 @@ internal suspend fun holdLoadingMinimum(started: Long) = withContext(Dispatchers
     // A non-clickable Material Surface still blocks pointer propagation. This decoration must
     // never swallow navigation or a mission click underneath it.
     Box(modifier.widthIn(max=470.dp).fillMaxWidth().testTag("xpReward")
-        .shadow(12.dp,RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp))
-        .background(Paper).border(1.dp,Line,RoundedCornerShape(24.dp))) {
+        .clip(RoundedCornerShape(20.dp))
+        .background(Charcoal).border(1.dp,Charcoal,RoundedCornerShape(20.dp))) {
         Column(Modifier.padding(horizontal=24.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment=Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("좋은 충전이 도시의 성장으로",color=Subtle,fontSize=12.sp)
-                    Text("+${award.personalGain} 데모 XP",fontSize=23.sp,fontWeight=FontWeight.Bold,color=Green)
+                    Text("충전 미션 완료",color=OnDarkMuted,fontSize=12.sp)
+                    Text("+${award.personalGain} XP",fontSize=24.sp,fontWeight=FontWeight.SemiBold,color=Green)
                 }
-                Text("도시 $displayed XP",fontWeight=FontWeight.SemiBold,fontSize=14.sp)
+                Text("도시 $displayed XP",fontWeight=FontWeight.Medium,fontSize=14.sp,color=Color.White)
             }
-            Box(Modifier.fillMaxWidth().height(45.dp)) {
-                LinearProgressIndicator(progress={CityLevels.progress(displayed)},color=Green,trackColor=SoftGreen,
-                    modifier=Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)))
-                Canvas(Modifier.matchParentSize()) {
-                    repeat(7){i->
-                        val t=((progress-i*.045f)/.66f).coerceIn(0f,1f)
-                        if(t>0f && t<1f) {
-                            val start=Offset(size.width*(.08f+i*.095f),0f)
-                            val end=Offset(size.width*.72f,size.height-5.dp.toPx())
-                            val p=Offset(start.x+(end.x-start.x)*t,start.y+(end.y-start.y)*t*t)
-                            rotate(12f+i*9f,p){drawRoundRect(if(i%2==0)Green else Color(0xFF6EA892),p-Offset(4.dp.toPx(),4.dp.toPx()),androidx.compose.ui.geometry.Size(8.dp.toPx(),8.dp.toPx()),androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()))}
-                        }
-                    }
-                }
-            }
+            LinearProgressIndicator(progress={CityLevels.progress(displayed)},color=Green,trackColor=Color.White.copy(alpha=.12f),
+                modifier=Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(4.dp)))
         }
     }
 }

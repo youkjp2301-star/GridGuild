@@ -31,7 +31,7 @@ class VisualAppFlowTest {
     }
     @Test fun enlargedHomeAndConstructionPreviewRunInTheInstalledApp() {
         ui.onNodeWithTag("tab0").performClick()
-        ui.onNodeWithTag("homeCityHero").assertIsDisplayed()
+        ui.onNodeWithTag("homeCityHero").performScrollTo().assertIsDisplayed()
         screenshot("v070-home.png")
         ui.onNodeWithTag("settings").performClick()
         ui.onNodeWithTag("loadingPreview").performScrollTo().performClick()
