@@ -184,14 +184,16 @@ private data class RankObservation(val rank: Int,val previous: Int?=null)
                     fontWeight=FontWeight.SemiBold,fontSize=16.sp,color=Ink
                 )
                 if(cities) Text(
-                    "Lv.${CityLevels.level(row.xp)} · 모의 공동 점수",
-                    fontSize=11.sp,lineHeight=17.sp,color=Subtle
+                    if(row.mine)"Lv.${row.cityLevel ?: "—"} · 누적 도시 ${row.cityXp ?: 0} XP"
+                    else "Lv.${row.cityLevel ?: "—"} · 모의 공동 점수",
+                    fontSize=11.sp,lineHeight=17.sp,color=Subtle,
+                    modifier=Modifier.testTag("ranking-city-level-${row.districtId}")
                 )
             }
         }
         RankingNumber(
             row.xp,suffix=" XP",color=if(row.mine)GreenDark else Ink,fontSize=22.sp,
-            modifier=Modifier.align(Alignment.End)
+            modifier=Modifier.align(Alignment.End).then(if(cities)Modifier.testTag("ranking-city-score-${row.districtId}") else Modifier)
         )
         if(cities) BentoProgress(row.xp.toFloat()/topXp.toFloat(),Modifier.fillMaxWidth())
     }

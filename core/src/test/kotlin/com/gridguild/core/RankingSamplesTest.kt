@@ -5,11 +5,13 @@ import org.junit.Test
 
 class RankingSamplesTest {
     @Test fun citiesCoverEveryLevelFromThreeThroughElevenWithoutEditingMyLedger() {
-        val levels=Rankings.cities(GameState(districtId="sasang"),0).map{CityLevels.level(it.xp)}.toSet()
+        val levels=Rankings.cities(GameState(),0).map{it.cityLevel}.toSet()
         assertEquals((3..11).toSet(),levels)
         val mine=GameState(districtId="sasang",history=listOf(PointEvent("keep","keep","sasang",5040,0)))
         assertEquals(5040,mine.cityXp("sasang"))
-        assertTrue(Rankings.cities(mine,0,false).single{it.mine}.xp>=5040)
+        val row=Rankings.cities(mine,0,false).single{it.mine}
+        assertEquals(5040,row.xp);assertEquals(5040,row.cityXp)
+        assertEquals(12,row.cityLevel)
     }
     @Test fun personalContainsThirtyTwoDistinctRivalsAndKeepsMyActualScore() {
         val game=GameState(history=listOf(PointEvent("keep","keep","sasang",120,0)))
