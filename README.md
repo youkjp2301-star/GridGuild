@@ -12,6 +12,7 @@
 - 실제 SDK 용량/출력은 아직 미연동이므로 SDK 모드에서 예상 시간을 꾸며내지 않는다. 장소 조회/필터/상세는 XP를 지급하지 않으며 실제 결제·쿠폰·환전·소비용 포인트는 미구현이다.
 - 데이터 경계·계산·향후 API 교체는 [CHARGING_LEISURE.md](docs/CHARGING_LEISURE.md), 실제 빌드/기기 결과는 [TEST_REPORT.md](docs/TEST_REPORT.md)를 따른다. 원본 AVD는 보존하고 별도 QA를 사용한다.
 - 자동 화면 검사는 진행 데이터를 fixture로 바꾸므로 **QA 기기만 지정**한다. 이 PC의 QA는 `emulator-5556`이며 원본 `GridGuild_Mock_API34`에는 실행하지 않는다. 예: `powershell -ExecutionPolicy Bypass -File scripts/test-device.ps1 -Serial emulator-5556`. 이번에 실제 통과한 검사 범위는 검증 기록을 따른다.
+- **설치 위치 확인(2026-11-12):** 최초 검증은 QA에만 설치했으나, 사용자 문의에 따라 평소 보는 `GridGuild_Mock_API34`(`emulator-5554`)도0.12.0/code13으로 업데이트했다. 기존 APK/진행 데이터를 백업하고 `install -r`로 업데이트했으며 진행 데이터가 그대로임을 확인했다. 기기 번호는 실행 순서에 따라 바뀔 수 있으므로 AVD 이름과 설치 버전을 함께 확인한다. 자동 fixture 검사는 계속 QA에서만 수행한다.
 
 ## 0.11.0 — 현재 레벨의 도로 위에 들어가는 1인칭 도시
 
