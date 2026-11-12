@@ -8,8 +8,8 @@
 | 공식 Pleos 이미지 | v2.1.0 API 34 x86_64, SHA1 `b4f858d5bcc6c71506d7edfc872bcb9e5a11acaa` 공식 목록과 일치 |
 | APK 빌드 | `:app:assembleDebug` 성공 |
 | Lint | `:app:lintDebug` 성공. 버전 업데이트 권고 등 경고는 남음 |
-| 단위 테스트 | 최신 0.12.0: `:core:test` **92개**, 실패/오류 0 |
-| 에뮬레이터 테스트 | 0.12.0 선택22개를 여러 실행에서 확인, 최종 즐길거리4개도 재통과. 전체60개 및 실제 SDK 프로브 재실행은 하지 않음. 아래 실행별 결과 참고 |
+| 단위 테스트 | 최신 0.13.0: `:core:test` **96개**, 실패/오류 0 |
+| 에뮬레이터 테스트 | 0.13.0 선택21개를 여러 실행에서 확인. 첫20개19통과/1실패→보완 후6개 재검사 통과→최종 방향3개 통과. 전체66개 및 실제 SDK 프로브를 재실행한 것은 아님 |
 | Git 추적 파일 구성 | 로컬 설정·SDK 폴더를 제외한 Git index export에서 assembleDebug + core:test + lintDebug 모두 성공 |
 | 실제 로컬 Clone | 첫 커밋 4a5fd0e를 `git clone --no-local`로 복제. JAVA_HOME/ANDROID_HOME만 지정해 APK + 24개 단위 테스트 + Lint 성공 (36초) |
 | 최종 코드 Clone | 코드 커밋 cfd0141로 fast-forward 후 같은 검사 재통과 (41초). local.properties 미포함 확인 |
@@ -18,6 +18,22 @@
 | Virtual Console | SOC 42%, 충전 OFF, 기어 P 설정을 Aside가 UI에서 확인 |
 | Vehicle SDK 런타임 프로브 | **통과**. 실제 source=PLEOS, SOC=100.0%, 충전 스위치 OFF, GEAR_PARK, UX 허용 수신 |
 | Navi SDK 런타임 프로브 | **실패**. Navi Service 연결은 완료됐지만 30초 내 목적지 콜백 미수신. 실제 경유지 등록 성공은 미검증 |
+
+## 0.13.0 시연 화면 정리·장소 목적지·N 방향 검증
+
+- 신규 단위4개 포함 core96개 통과: 장소 자체 좌표 전달, 잘못된 원천/다른 충전소/무효 좌표/300m 외부 차단, 정확한300m 경계와 일반 목적지 유효성.
+- APK/테스트 APK/core:test/lintDebug 첫 빌드6분43초 성공. 추가 검수의 stale SOC/방향 고정 보완 후 최종 빌드1분38초 성공. Lint0오류/기존14경고다.
+- 첫 QA 선택20개는303.953초에19통과/1실패였다. 즐길거리6개, N방향2개, 내비 저장소6개, 내비UI2개, 목적지UI2개, 배터리 안정1개가 성공했다. highSOC 목적지 검사 시작 시 Compose 테스트 프레임의 Default 작업 스레드에서 Choreographer `The current thread must have a looper!` 예외가 발생했다. 실제 앱 AndroidRuntime 종료와 구분하고 첫 실행을 전체 통과로 표시하지 않는다.
+- 즐길거리 목적지 버튼으로 장소 좌표/이름 반영, 진행 미션·XP 유지, 기존 충전 완료120XP,4필터/상세/광고/20분·결측/UX닫힘을 확인했다. 공식 RouteInfo를 사용하는 일반 좌표 요청은 fake-client 테스트이며 실제 Navi Service 성공이 아니다.
+- 독립 코드 검수에서 오래된 raw SOC 노출과 가로 진입 후 세로 전환 가능성을 발견했다. Home/ROUTE의 결측 표시는 짧게 유지하고, N은 현재 가로 방향을 LOCKED로 유지하도록 보완했다. 양쪽 가로 진입/진입 후 세로 회전 요청/원장 불변/실제 Global Back 및 X버튼/이전 요청 복원 검사를 포함한다.
+- QA 첫 부팅에서 새 앱 실행 전 System UI/전화/Google 서비스 ANR가 나타났다. 로그를 보존하고 Wait1회 뒤 정상 앱 포커스를 확인했다. 재부팅·초기화·AVD 재생성을 반복하지 않았다. 이전 시스템 종료 최초 원인이 해결되었다고 주장하지 않는다.
+- 보완 후 재검사6개는90.834초에 모두 통과했다. 앞서 실패한highSOC1개, 가로90/270·진입 후 세로 회전 시 방향 고정·뒤로가기 및 세로 진입/X복귀2개, 간결한 Home/ROUTE·장소 목적지/원장 보존2개, 배터리 안정1개다. 첫 묶음 실행의 Looper 예외 원인을 확정하거나 재발이 불가능하다고 주장하지 않는다.
+- 실제 원본 기기에는 `wm size 1280x800`/density160 override가 있었다. 물리 패널1080×1920·rotation90이지만 논리 화면은800×1280/PORTRAIT이므로 기존 SENSOR_LANDSCAPE도 진입 시 rotation0으로 바뀌는 문제를 재현했다. 패널 크기·회전축도 함께 확인해 이미 가로인 물리 화면은 현재 방향을 고정하도록 수정했다. 원본 설정은 변경하지 않았다.
+- QA에서만 같은 override를 임시 재현하고 finally복원하는 검사를 추가했다. 최종 빌드36초 및 최종 테스트 APK/Lint13초 성공, 최종 방향3개34.028초에 모두 통과. 정상90/270·portrait 진입/복원과 override의 논리PORT/rotation90 유지·이미지 실행을 확인했다. 정사각 물리 패널의 방향 분류는 미검증이다.
+- 원본5554에도 최종0.13.0/code14를 설치했다. 이전 설치 APK/진행을 앱 내부와 PC에 백업하고 각 업데이트 전후·실제 N/ROUTE/즐길거리 화면 확인 후 진행SHA256 동일(`5d93202a8f7a74516b89e1797f028ff97243c6b1f26f2c4c48ab13fe2fd46dcb`)을 확인했다. 레벨/XP fixture 검사는 원본에 실행하지 않았다.
+- 원본 N에서 광안리 현재Lv.7을 실제 열어 진입·Back 전후rotation90 동일, 정상 앱 포커스를 확인했다. 기존 logicalPORT 설정은 그대로여서 이미지 위아래 여백은 남는다. 논리 화면을 가로로 교정하거나 원본 AVD 설정 문제 전체를 해결한 것으로 표시하지 않는다. QA의 광안리Lv.2/센텀Lv.12는 정상 가로 캡처로 직접 검토했다.
+- QA 진행도 사전 백업으로 복원해 재실행 후SHA256 동일(`191fdbdcae7323ead5f53ced0bacb248c205e71cd1b9d574226f8e91b0356631`), wm size/density override 없음 및 기존 자동회전1/사용자회전0 복원을 확인했다. 시험 시작 이후 QA event log의am_anr/am_crash는0건이다.
+- 최종 APK는 `artifacts/showcase-v013/verified/GridGuild-0.13.0-debug.apk`, SHA256 `0fc8ba9d67e10c781e08fb65fbc712ab2d4925a50e6136d8e9964797c8057a6e`다. 원본/QA에 실제 설치된 base.apk와 일치한다. 정상 캡처는 같은 폴더의screens/ 및 current-device-*.png에 보존했다. 중간 검수본과 이전0.12.0 APK는 덮어쓰지 않았다.
 
 ## 0.12.0 도시 레벨 ±1 및 충전 중 즐길거리 검증
 

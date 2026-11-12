@@ -145,4 +145,52 @@ class ChargingLeisureFlowTest {
         ui.onNodeWithTag("restricted").assertExists()
         assertEquals(before,state())
     }
+
+    @Test fun placeDestinationUsesThePlaceCoordinatesAndKeepsTheActiveMissionAndLedger() {
+        ui.activityRule.scenario.onActivity{model.setDemoAvailability(station.id,DemoAvailabilityScenario.FREE)}
+        routeClick("mission-${station.id}")
+        ui.waitUntil(8_000){state().mission?.stationId==station.id};ui.waitForIdle()
+        val before=state();open()
+        val place=MockChargingLeisurePlaces.forStation(station).first()
+        show("leisureDestination-${place.id}")
+        ui.onNodeWithTag("leisureDetail-${place.id}").assertIsDisplayed()
+        ui.onNodeWithTag("leisureDestination-${place.id}").performClick()
+        ui.waitUntil(8_000){model.navigation.value.let{!it.pending && it.confirmed && it.destination.contains(place.name)}}
+        ui.onNodeWithTag("chargingLeisureSheet").assertDoesNotExist()
+        assertEquals(place.lat,model.navigation.value.lat!!,0.000001)
+        assertEquals(place.lon,model.navigation.value.lon!!,0.000001)
+        assertEquals(before.history,state().history);assertEquals(before.mission?.id,state().mission?.id)
+        assertEquals(before.xp,state().xp)
+        routeClick("navTools")
+        ui.onNodeWithTag("missionList").performScrollToNode(hasTestTag("navDestination"))
+        ui.onNodeWithTag("navDestination").assertTextEquals("목적지 ${place.name}")
+        ui.onNodeWithTag("navStatus").assertTextEquals("변경 완료")
+        screenshot("showcase-place-destination.png")
+    }
+
+    @Test fun routeAndHomeExposeOnlyTheConciseLabels() {
+        routeClick("changeDemoDestination")
+        ui.onNodeWithTag("demo-destination-gwangalli").performScrollTo().performClick()
+        ui.waitUntil(8_000){!model.navigation.value.pending && model.navigation.value.destination.contains("광안리")}
+        ui.onNodeWithTag("missionList").performScrollToNode(hasTestTag("navDestination"))
+        ui.onNodeWithTag("navDestination").assertTextEquals("목적지 광안리 해변")
+        ui.onNodeWithTag("navStatus").assertTextEquals("변경 완료")
+        ui.onNodeWithTag("missionBatteryStatus").assertDoesNotExist()
+        ui.onNodeWithTag("nearbyReason").assertDoesNotExist()
+        ui.onNodeWithText("목적지 변경").assertExists()
+        ui.onAllNodesWithText("(MOCK)",substring=true).assertCountEquals(0)
+        ui.onAllNodesWithText("자동으로 갱신",substring=true).assertCountEquals(0)
+        screenshot("showcase-route-clean.png")
+        ui.onNodeWithTag("tab0").performClick()
+        ui.activityRule.scenario.onActivity{model.mockCharge(true)}
+        ui.onNodeWithTag("batteryStatus").performScrollTo()
+        ui.waitUntil(8_000){ui.onAllNodesWithText("충전 스위치 ON").fetchSemanticsNodes().isNotEmpty()}
+        ui.onNodeWithTag("batteryStatus").assertTextEquals("충전 스위치 ON")
+        ui.onNodeWithText("EV 배터리").assertExists()
+        ui.onAllNodesWithText("데모 데이터 정상",substring=true).assertCountEquals(0)
+        ui.onAllNodesWithText("전력량·장소 인증",substring=true).assertCountEquals(0)
+        ui.onNodeWithText("목적지 광안리 해변").assertExists()
+        screenshot("showcase-home-clean.png")
+        assertEquals(0,state().xp)
+    }
 }

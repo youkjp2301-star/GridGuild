@@ -33,7 +33,7 @@ import kotlinx.coroutines.CancellationException
 
 /** Station-local, read-only discovery. Opening, filtering and inspecting never write the game ledger. */
 @Composable internal fun ChargingLeisureSheet(station: Station,game: GameState,reading: VehicleReading,now: Long,
-    repository: LeisurePlaceRepository,onDismiss:()->Unit) {
+    repository: LeisurePlaceRepository,destinationEnabled: Boolean,onDestination:(LeisurePlace)->Boolean,onDismiss:()->Unit) {
     var category by remember(station.id){mutableStateOf<LeisureCategory?>(null)}
     var selectedPlaceId by remember(station.id){mutableStateOf<String?>(null)}
     var conditions by remember(station.id,game.mode){mutableStateOf(false)}
@@ -110,7 +110,7 @@ import kotlinx.coroutines.CancellationException
                     }
                     item {
                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                            LeisureBadge("가상 장소 · MOCK")
+                            LeisureBadge("가상 장소")
                             Text("반경 300m",color=Subtle,fontSize=14.sp)
                         }
                         Text("직선거리 기준 · 도보 시간 미확인",color=Subtle,fontSize=14.sp,modifier=Modifier.padding(top=8.dp).testTag("leisureDistanceNote"))
@@ -128,12 +128,17 @@ import kotlinx.coroutines.CancellationException
                     else if(snapshot==null)item{Text("가상 장소를 불러오고 있어요.",color=Subtle)}
                     else if(recommendations.isEmpty())item{Text("이 조건의 가상 장소가 아직 없어요.",color=Subtle,modifier=Modifier.testTag("leisureEmpty"))}
                     items(recommendations,key={it.place.id}) { recommendation ->
-                        LeisurePlaceCard(recommendation){finishEditing();selectedPlaceId=recommendation.place.id}
+                        LeisurePlaceCard(recommendation,destinationEnabled,
+                            onDestination={finishEditing();if(onDestination(recommendation.place))onDismiss()},
+                            onDetail={finishEditing();selectedPlaceId=recommendation.place.id})
                     }
                     item { Text(if(estimate!=null)"활동시간을 기준으로 추천해요. 보행·복귀 시간과 실제 충전 완료는 보장하지 않습니다."
                         else "활동시간은 예시이며 실제 영업·행사 정보는 연결되지 않았어요.",fontSize=14.sp,color=Subtle) }
                 } else {
-                    item { LeisurePlaceDetail(selected) }
+                    item { LeisurePlaceDetail(selected)
+                        OutlinedButton(onClick={if(onDestination(selected.place))onDismiss()},enabled=destinationEnabled,
+                            modifier=Modifier.fillMaxWidth().heightIn(min=52.dp).testTag("leisureDestinationDetail")){Text("목적지 설정")}
+                    }
                 }
             }
         }
@@ -151,7 +156,7 @@ private val LeisureCategory.icon: ImageVector get()=when(this) {
 
 @Composable private fun LeisureEstimatePanel(estimate: ChargingTimeEstimate?,soc: Double?,target: Double?,mock: Boolean,missing: String) {
     Panel(Modifier.fillMaxWidth()) {
-        Text(if(mock)"목표까지 예상 충전시간 · 모의 계산" else "목표까지 예상 충전시간",fontSize=15.sp,color=Subtle)
+        Text("목표까지 예상 충전시간",fontSize=15.sp,color=Subtle)
         Text(estimate?.let{"약 ${it.minutes}분"} ?: "시간 정보 없음",fontSize=30.sp,fontWeight=FontWeight.Bold,color=Ink,modifier=Modifier.testTag("leisureEstimate"))
         Text("현재 SOC ${leisureNumber(soc)}% → 목표 ${leisureNumber(target)}%",fontSize=16.sp,color=Ink,modifier=Modifier.testTag("leisureSocTarget"))
         if(estimate==null)Text(missing,fontSize=14.sp,color=Subtle,modifier=Modifier.testTag("leisureEstimateReason"))
@@ -176,7 +181,7 @@ private val LeisureCategory.icon: ImageVector get()=when(this) {
     }
 }
 
-@Composable private fun LeisurePlaceCard(recommendation: LeisureRecommendation,onDetail:()->Unit) {
+@Composable private fun LeisurePlaceCard(recommendation: LeisureRecommendation,destinationEnabled: Boolean,onDestination:()->Unit,onDetail:()->Unit) {
     val place=recommendation.place
     Surface(color=Paper,shape=RoundedCornerShape(20.dp),border=BorderStroke(1.dp,Line),modifier=Modifier.fillMaxWidth().testTag("leisureCard-${place.id}")) {
         Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -186,9 +191,11 @@ private val LeisureCategory.icon: ImageVector get()=when(this) {
                 if(place.isAdvertisement)LeisureBadge("광고",true)
             }
             Text("${place.category.label} · 직선 ${recommendation.straightLineMeters.roundToInt()}m",fontSize=14.sp,color=Subtle)
-            Row(verticalAlignment=Alignment.CenterVertically) {
-                Text("${place.activityTitle} · 약 ${place.activityMinutes}분",Modifier.weight(1f),fontSize=16.sp,fontWeight=FontWeight.Medium,color=Ink)
+            Text("${place.activityTitle} · 약 ${place.activityMinutes}분",fontSize=16.sp,fontWeight=FontWeight.Medium,color=Ink)
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End,verticalAlignment=Alignment.CenterVertically) {
                 TextButton(onClick=onDetail,modifier=Modifier.heightIn(min=48.dp).testTag("leisureDetail-${place.id}")){Text("상세보기");Icon(Icons.Outlined.ChevronRight,null,Modifier.size(18.dp))}
+                OutlinedButton(onClick=onDestination,enabled=destinationEnabled,
+                    modifier=Modifier.heightIn(min=48.dp).testTag("leisureDestination-${place.id}")){Text("목적지 설정")}
             }
             if(recommendation.timeFit==LeisureTimeFit.TOO_LONG)Text("활동시간 여유를 확인하세요",fontSize=14.sp,color=Subtle)
         }

@@ -28,7 +28,7 @@ class DestinationDemoFlowTest {
     private fun select(id: String) {
         show("changeDemoDestination");ui.onNodeWithTag("changeDemoDestination").performClick()
         ui.onNodeWithTag("demo-destination-$id").performScrollTo().performClick()
-        ui.waitUntil(8_000){ui.onAllNodesWithText("데모 목적지 설정 완료",substring=true).fetchSemanticsNodes().isNotEmpty()}
+        show("navStatus");ui.waitUntil(8_000){ui.onAllNodesWithText("변경 완료").fetchSemanticsNodes().isNotEmpty()}
     }
     private fun screenshot(name: String) {
         ui.waitForIdle()
@@ -62,7 +62,7 @@ class DestinationDemoFlowTest {
         show("changeDemoDestination");ui.onNodeWithTag("changeDemoDestination").performClick()
         screenshot("destination-picker.png")
         ui.onNodeWithTag("randomDemoDestination").performClick()
-        ui.waitUntil(8_000){ui.onAllNodesWithText("데모 목적지 설정 완료",substring=true).fetchSemanticsNodes().isNotEmpty()}
+        show("navStatus");ui.waitUntil(8_000){ui.onAllNodesWithText("변경 완료").fetchSemanticsNodes().isNotEmpty()}
         val text=ui.onNodeWithTag("navDestination").fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.Text].joinToString{it.text}
         assertFalse(text.contains("삼락생태공원"))
         assertEquals(original,runBlocking{store.state.first()})

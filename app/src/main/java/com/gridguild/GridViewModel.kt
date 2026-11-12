@@ -194,6 +194,15 @@ class GridViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun addWaypoint(station: Station) = navigationAction { it.addWaypoint(station) }
     fun setDestination(station: Station) = navigationAction { it.setDestination(station) }
+    fun setLeisureDestination(station: Station,place: LeisurePlace): Boolean {
+        val target=NavigationTarget.fromLeisure(station,place) ?: return false
+        val repository=navRepo as? MockNavigationRepository ?: return false
+        if(game.value.mode!=AppMode.MOCK || !platformAllowed.value || !safety.value.allowsGame(System.currentTimeMillis()) ||
+            repository.state.value.pending || SampleData.stations.none{it==station})return false
+        val before=repository.state.value.requestId
+        repository.setDestination(target)
+        return repository.state.value.requestId>before
+    }
     fun refreshNavigation() = navigationAction { it.refresh() }
     fun reroute() = navigationAction { it.reroute() }
     fun changeDemoDestination(destination: DemoDestination) = navigationAction { repository ->

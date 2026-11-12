@@ -647,6 +647,45 @@
 - 실제 SDK 종단/장소·도보 API/쿠폰 등 기존 미완료는 유지한다. 다음 전달에서는 실제 사용 기기와 QA의 설치 버전을 구분해 안내한다. 원본 진행을 덮어쓰는 자동검사는 계속 QA로 한정한다.
 - GitHub 원격 미설정으로 push는 하지 않으며 이번 문서 변경만 로컬 커밋하고 병행 CHESTER24줄은 보존·제외한다.
 
+## 2026-11-12 — 0.13.0 간결한 화면·주변 장소 목적지·N단 방향 보존
+
+### 1. 현재까지 구현한 기능
+
+- 충전 중 즐길거리의 상세보기 옆과 상세 하단에 목적지 설정을 추가했다. 선택 장소의 이름/좌표를 Mock 내비 목적지로 전달하며 충전소 좌표로 대체하지 않는다.300m/원천/충전소 연결/좌표/현재 P·플랫폼 허용/중복 요청을 확인하고 진행 미션·개인/도시 XP는 유지한다.
+- 목적지를 진한22sp로 표시하고 목적지 변경 결과는 변경 완료로 줄였다. Home 배터리·누적 XP, ROUTE 목적지/충전소 버튼의 반복 Mock·데모·테스트 접미어와 정상 데이터·자동 갱신·추천 이유·하단 설명을 정리했다. 출처는 상단 체험 모드 안내에 모으고 가상 장소/광고/예시 혜택과 실제 오류 안내는 유지했다.
+- 독립 코드 검수의2건을 반영했다. 오래된 Home/ROUTE SOC·충전값은 정상 수치처럼 보여주지 않고 —/확인 중으로 표시한다. N은 이미 가로이면 현재 방향을 고정하고 세로 진입이면 센서 가로를 사용하며 종료 시 원래 방향 요청을 복원한다.
+- 실제 원본 AVD에서1280×800 override/160dpi와 물리1080×1920 패널의 축 불일치를 확인했다. rotation90인데 logicalPORT인 조건에서 SENSOR_LANDSCAPE가rotation0으로 바꾸는 것을 재현했다. 물리 패널 크기와 회전값도 확인하도록 보완했고 원본 설정은 유지했다. 픽셀 회전·플랫폼 제한 우회는 하지 않는다.
+
+### 2. Pleos SDK 연동 완료·미완료
+
+- NaviHelper3.0.5 공식 RouteInfo로 일반 이름/좌표 목적지를 요청하는 typed overload를 추가하고 일치하는 좌표 응답만 성공 확인한다. 기존 충전소 경유지/목적지/갱신/재탐색 콜백 흐름은 유지했다. fake-client 저장소6개 성공은 실제 Navi Service 종단 성공을 뜻하지 않는다.
+- 현재 장소는 가상 Mock 데이터라 장소 목적지 버튼은 Mock 모드에서만 활성화한다. 실제 장소 검색/도보/광고 과금·쿠폰/실제 N 자동 진입·Navi 종단은 미완료/미검증이다. Vehicle2.3.2와 실제 P단·CarUxRestrictions 보호 및 미션/XP 정책은 유지한다.
+
+### 3. 변경된 주요 파일
+
+- core/NavigationTarget.kt·NavigationTargetTest.kt: 충전소·미션과 독립된 목적지 좌표 및300m/원천/유효성 단위4개.
+- app/data/Repositories.kt·PleosNavigationRepository.kt·GridViewModel.kt: 일반 좌표 요청, Mock 장소 목적지/안전 가드. NavigationControls.kt·GridGuildApp.kt·ChargingLeisureSheet.kt: 간결한 문구/목적지 가독성·버튼·결측 표시. NeutralCityScreen.kt: 현재 물리/논리 방향 보존과 원래 요청 복원.
+- ChargingLeisureFlowTest.kt·NavigationRepositoryTest.kt·NeutralOrientationFlowTest.kt: 장소 목적지·원장 보존/typed 요청·가로90/270/세로/override 검사. DestinationDemoFlowTest.kt·UiRegressionTest.kt의 표시 문자열 기대값도 현재 UI에 맞췄다.
+- app/build.gradle.kts:0.13.0/code14. PRD19절·README·CHARGING_LEISURE·TEST_REPORT: 사용자 추가 요구와 실제 검증/설치 경로를 갱신했다.
+
+### 4. 빌드 및 테스트 결과
+
+- core96개 통과/실패·오류0. APK/테스트 APK/core/Lint 첫6분43초, stale/방향 보완 후1분38초, 물리 회전축 보완 후36초 성공. 최종 테스트 소스/Lint13초 성공, Lint0오류/기존14경고다.
+- QA 첫 선택20개303.953초에19통과/1실패: highSOC 검사 시작 시 Compose TestMonotonicFrameClock의 Default 스레드에서 Choreographer Looper 예외가1회 발생했다. 다른19개는 즐길거리6/N방향2/내비 저장소6/내비UI2/목적지UI2/배터리 안정1이다. AndroidRuntime 앱 종료와 구분하며 이 실행을 전체 통과로 표시하지 않는다.
+- 보완 후 실패1개+N방향2+간결 UI/장소 목적지2+배터리 안정1을90.834초에6개 모두 재통과했다. 실제 충전 완료120XP/미션·원장 보존/필터·상세·광고·20분·결측·UX 제한도 첫 실행에서 확인했다. Looper 예외 재발 원인은 확정하지 않았다.
+- 원본과 같은 wm1280×800/160dpi를 QA에서만 잠시 적용·finally복원하는 검사1개를 추가했다. 최종 N방향3개34.028초에 모두 통과했다. 총21개 고유 검사를 여러 실행에서 확인한 범위이며 전체66개나 실차 SDK 종단의 일괄 통과를 의미하지 않는다.
+- QA 새 앱 실행 전 System UI/전화·Google 서비스 ANR를 보존했다. Wait1회 뒤 정상 앱 포커스를 확인했고 시험 시작 이후event의am_anr/am_crash0건이었다. 재부팅/재생성/초기화/앱 데이터 삭제를 반복하지 않았다.
+- 원본5554에0.13.0/code14 최종 APK를 설치했다. 이전 설치APK/진행을 앱 내부와 PC에 백업하고 install -r로 업데이트했다. 단계별 검수 중간APK도 보존했으며 최종은 artifacts/showcase-v013/verified/GridGuild-0.13.0-debug.apk, SHA2560fc8ba9d67e10c781e08fb65fbc712ab2d4925a50e6136d8e9964797c8057a6e다. 원본/QA 실제 설치base.apk와 일치한다.
+- 원본의 현재 광안리Lv.7 N이미지·시스템Back·ROUTE·즐길거리 버튼 화면을 실제 확인/캡처했다. N 진입/종료rotation90 유지와 정상 앱 포커스를 확인했다. 진행SHA2565d93202a8f7a74516b89e1797f028ff97243c6b1f26f2c4c48ab13fe2fd46dcb가 업데이트 전/후/재실행/화면 확인 후 동일했다. 레벨/XP fixture는 원본에 실행하지 않았다.
+- QA DataStore를 사전 백업으로 복원해 재실행 후SHA256191fdbdcae7323ead5f53ced0bacb248c205e71cd1b9d574226f8e91b0356631 동일, wm size/density override 없음, 기존 자동회전1/사용자회전0 복원을 확인했다. QA Lv.2 광안리/Lv.12 센텀의 정상 가로 캡처와 원본 실제 캡처는 최종 APK 폴더에 보존·직접 검토했다.
+- git diff --cached --check 및 실제 index167파일 비밀정보 검사를 통과했다. 변경20파일만 로컬 커밋하고 로컬 도구·백업·산출물과 기존 병행 CHESTER24줄은 제외한다.
+
+### 5. 남아 있는 오류와 다음 개발 작업
+
+- 원본 override 설정의 logicalPORT는 변경하지 않아 N 이미지 위아래 여백이 남는다. 현재 방향 유지가 검증된 것이며 논리가로 화면 교정/AVD 환경 전체 복구로 주장하지 않는다. 정사각 패널 방향 분류는 미검증이다.
+- 간헐 Compose 테스트 Looper 예외와 이전 시스템 종료의 최초 원인, 실제 SDK 목적지 종단/장소·도보 API 등 기존 미완료는 유지한다. 도시 이미지는 기존 정지 가상 재구성 그대로이며 이번 작업에서 새 AI 이미지를 생성하지 않았다.
+- GitHub 원격/인증 미설정으로 push하지 않는다. 이번 소스·문서·DEV_LOG만 비밀정보 검사 후 로컬 커밋하고 병행 CHESTER의 기존24줄은 보존·커밋 제외한다. 로컬 SDK/설정·백업·원시 로그·APK/캡처는 Git에서 제외한다.
+
 ## 작업 종료 시 갱신 양식
 
 아래 다섯 항목을 실제 결과로 작성하고 관련 코드와 같은 커밋에 포함한다.

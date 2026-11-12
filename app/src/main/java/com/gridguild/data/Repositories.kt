@@ -39,6 +39,7 @@ interface NavigationRepository : AutoCloseable {
     fun refresh()
     fun addWaypoint(station: Station)
     fun setDestination(station: Station)
+    fun setDestination(target: NavigationTarget)
     fun reroute()
 }
 
@@ -83,7 +84,10 @@ class MockNavigationRepository(private val scope: CoroutineScope,private val res
         simulate(NavigationOperation.WAYPOINT,"데모 경유지 추가 중…","데모 경유지 반영 완료: ${station.name} · 실제 내비 등록 아님")
     }
     override fun setDestination(station: Station) {
-        changeDestination(station.name,station.lat,station.lon)
+        setDestination(NavigationTarget(station.name,station.lat,station.lon))
+    }
+    override fun setDestination(target: NavigationTarget) {
+        if(target.isValid)changeDestination(target.name,target.lat,target.lon)
     }
     fun setDemoDestination(destination: DemoDestination) {
         // Only prepared test locations can enter this Mock-only path.

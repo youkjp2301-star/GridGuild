@@ -105,6 +105,24 @@ class NavigationRepositoryTest {
             assertEquals(listOf("centum","centum-campus","gwangalli","gwangalli-marina"),ChargingRecommendations.around(repo.state.value.lat,repo.state.value.lon,42f).nearby.map{it.station.id})
         } finally { main{repo.close()};scope.cancel() }
     }
+    @Test fun genericPlaceCoordinatesUseTypedRouteRequestsAndOnlyMatchingResponsesConfirmThem()=runBlocking {
+        val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main)
+        val client=FakeNaviClient();val repo=PleosNavigationRepository(client,scope,true)
+        try {
+            main{repo.connect();client.listener.onDestinationInfo(destination())};repo.finished()
+            val target=NavigationTarget("가상 커피방",35.1694,128.9743)
+            main{repo.setDestination(NavigationTarget("",0.0,0.0))}
+            assertNull(client.lastRoute)
+            main{repo.setDestination(target)}
+            assertEquals(target.lat,client.lastRoute!!.latitude,0.0)
+            assertEquals(target.lon,client.lastRoute!!.longitude,0.0)
+            assertTrue(repo.state.value.pending)
+            main{client.listener.onDestinationInfo(destination())}
+            assertTrue(repo.state.value.pending)
+            main{client.listener.onDestinationInfo(destination(target.lat,target.lon))}
+            assertTrue(repo.finished().confirmed)
+        } finally {main{repo.close()};scope.cancel()}
+    }
 }
 
 private class FakeNaviClient : NaviClient {
@@ -112,11 +130,12 @@ private class FakeNaviClient : NaviClient {
     var reroutes=0
     var throwOnRead=false
     var reads=0
+    var lastRoute: RouteInfo?=null
     override fun connect(listener: NaviHelperEventListener,onConnected: ()->Unit,onFailed: (Throwable)->Unit) { this.listener=listener;onConnected() }
     override fun getDestinationInfo() { reads++;if(throwOnRead)error("fake read failure") }
     override fun getWaypointInfo()=Unit
     override fun requestReRoute() { reroutes++ }
     override fun addWaypoint(info: RequestWaypointInfo)=Unit
-    override fun requestRoute(info: RouteInfo)=Unit
+    override fun requestRoute(info: RouteInfo){lastRoute=info}
     override fun close()=Unit
 }

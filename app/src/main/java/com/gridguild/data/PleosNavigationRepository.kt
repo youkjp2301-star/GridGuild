@@ -21,7 +21,7 @@ class PleosNavigationRepository internal constructor(
     private val requests=NavigationRequests(state,scope,timeoutMillis)
     private var connected = false
     @Volatile private var closed = false
-    private var expected: Station? = null
+    private var expected: NavigationTarget? = null
     private fun receive(block: ()->Unit) { scope.launch(Dispatchers.Main.immediate) { if(!closed)block() } }
     private val listener = object : NaviHelperEventListener {
         override fun onDestinationInfo(info: DestinationInfo) = receive {
@@ -91,17 +91,21 @@ class PleosNavigationRepository internal constructor(
     }
     override fun addWaypoint(station: Station) {
         begin(NavigationOperation.WAYPOINT,"경유지 요청 전송 · 응답 확인 중…") ?: return
-        expected=station
+        expected=NavigationTarget(station.name,station.lat,station.lon)
         send {
             client.addWaypoint(RequestWaypointInfo(latitude=station.lat,longitude=station.lon,poiName=station.name,waypointIndex=WaypointIndex.FIRST,poiId="",address="",poiSubId=""))
             client.getWaypointInfo()
         }
     }
     override fun setDestination(station: Station) {
+        setDestination(NavigationTarget(station.name,station.lat,station.lon))
+    }
+    override fun setDestination(target: NavigationTarget) {
+        if(!target.isValid)return
         begin(NavigationOperation.DESTINATION,"목적지 설정 요청 전송 · 좌표 응답 확인 중…") ?: return
-        expected=station
+        expected=target
         send {
-            client.requestRoute(RouteInfo(latitude=station.lat,longitude=station.lon,poiName=station.name,poiId="",address="",poiSubId=""))
+            client.requestRoute(RouteInfo(latitude=target.lat,longitude=target.lon,poiName=target.name,poiId="",address="",poiSubId=""))
             client.getDestinationInfo()
         }
     }

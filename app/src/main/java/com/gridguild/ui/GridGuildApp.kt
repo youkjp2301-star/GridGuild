@@ -84,7 +84,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                     }
                     Spacer(Modifier.weight(1f))
                     AssistChip(onClick={modeInfo=true},enabled=platformAllowed,
-                        label={Text(if(game.mode==AppMode.MOCK) "데모 (Mock)" else "Pleos SDK")},
+                        label={Text(if(game.mode==AppMode.MOCK) "체험 모드" else "Pleos SDK")},
                         leadingIcon={Icon(Icons.Outlined.Info,null,Modifier.size(18.dp))},
                         shape=RoundedCornerShape(12.dp),border=BorderStroke(1.dp,Line),
                         colors=AssistChipDefaults.assistChipColors(containerColor=Bg,labelColor=Blue,leadingIconContentColor=Blue),
@@ -126,11 +126,6 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                 if(message.isNotBlank()) Row(Modifier.fillMaxWidth().background(Pale).padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically) {
                     Text(message,Modifier.weight(1f),fontSize=14.sp)
                     TextButton(onClick={model.message.value=""}){Text("닫기")}
-                }
-                HorizontalDivider(color=Line)
-                Row(Modifier.fillMaxWidth().background(Paper).padding(horizontal=24.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Outlined.Info,null,tint=Subtle,modifier=Modifier.size(14.dp))
-                    Text(if(game.mode==AppMode.MOCK)"데모 데이터 · 충전소·전력망·경쟁자는 샘플이며 XP는 위치 미인증 성과입니다." else "차량: Pleos SDK · 충전소·전력망·경쟁자: 데모 · XP는 위치 미인증 성과입니다.",fontSize=12.sp,color=Subtle)
                 }
             }
             XpRewardHost(model.rewards,allowed && ready && introFinished,game.cityXp(game.districtId),
@@ -263,13 +258,13 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
             val metrics: @Composable ()->Unit = {
             BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val battery: @Composable (Modifier)->Unit = { card -> Panel(card) {
-                    Metric("EV 배터리 · ${v.source}","${v.soc?.toInt() ?: "—"}%",Icons.Outlined.BatteryChargingFull)
-                    LinearProgressIndicator(progress={(v.soc ?: 0f)/100f},modifier=Modifier.fillMaxWidth().height(5.dp),color=Green,trackColor=Bg)
-                    Text("충전 스위치 ${v.chargeSwitch} · ${reading.statusLabel}",fontSize=13.sp,color=if(reading.fresh)Green else Subtle,modifier=Modifier.testTag("batteryStatus"))
-                    Text("충전 스위치 ON은 전력량·장소 인증이 아닙니다.",fontSize=12.sp,color=Subtle)
+                    Metric("EV 배터리",if(reading.fresh)"${v.soc?.toInt() ?: "—"}%" else "—%",Icons.Outlined.BatteryChargingFull)
+                    LinearProgressIndicator(progress={if(reading.fresh)(v.soc ?: 0f)/100f else 0f},modifier=Modifier.fillMaxWidth().height(5.dp),color=Green,trackColor=Bg)
+                    Text(if(reading.fresh)"충전 스위치 ${v.chargeSwitch}" else "충전 상태 확인 중",fontSize=14.sp,
+                        color=if(reading.fresh)Green else Subtle,modifier=Modifier.testTag("batteryStatus"))
                 } }
                 val points: @Composable (Modifier)->Unit = { card -> Panel(card) {
-                    Metric("내 누적 데모 성과","${g.xp} XP",Icons.Outlined.Bolt)
+                    Metric("내 누적 XP","${g.xp} XP",Icons.Outlined.Bolt)
                     Text("이번 시즌 ${g.seasonXp(now)} XP",color=Subtle)
                     Button(onClick=onMission,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth().heightIn(min=54.dp)) { Icon(Icons.Outlined.EvStation,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text("충전 미션 참여하기") }
                 } }
@@ -280,8 +275,8 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                 Box(Modifier.weight(2.6f)){city()};Box(Modifier.weight(1f)){metrics()}
             } else Column(verticalArrangement=Arrangement.spacedBy(18.dp)) { city();metrics() }
         }
-        Spacer(Modifier.height(16.dp));Text("목적지 · ${n.destination}  |  ${n.source}",color=Subtle)
-        Text("월간 개인 ${Rankings.personal(g,now).indexOfFirst{it.mine}+1}위 · 소속 지역 ${Rankings.cities(g,now).indexOfFirst{it.mine}+1}위 · 경쟁자 MOCK",color=Subtle,fontSize=14.sp)
+        Spacer(Modifier.height(16.dp));Text(if(n.hasDestination)"목적지 ${destinationName(n.destination)}" else "목적지를 선택하세요",
+            color=Ink,fontSize=20.sp,fontWeight=FontWeight.SemiBold)
     }
 }
 @Composable private fun MissionScreen(g: GameState,reading: VehicleReading,n: NavigationState,now: Long,model: GridViewModel) {
@@ -319,8 +314,8 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
     LazyColumn(state=listState,modifier=Modifier.testTag("missionList"),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         item { Section("충전 미션","내 이동에 맞는 충전으로, 도시의 다음 단계를 준비해요.") }
         item { Panel(Modifier.fillMaxWidth()) {
-            Text("SOC ${v.soc?.toInt() ?: "—"}% · 충전 스위치 ${v.chargeSwitch}",fontWeight=FontWeight.Bold,fontSize=20.sp)
-            Text(reading.statusLabel,fontSize=14.sp,color=if(reading.fresh)Green else Subtle,modifier=Modifier.testTag("missionBatteryStatus"))
+            Text(if(reading.fresh)"SOC ${v.soc?.toInt() ?: "—"}% · 충전 스위치 ${v.chargeSwitch}" else "SOC — · 충전 상태 확인 중",
+                fontWeight=FontWeight.Bold,fontSize=20.sp)
             NavigationControls(n,g.mode==AppMode.MOCK,model::refreshNavigation,model::reroute,model::changeDemoDestination,model::randomDemoDestination)
         } }
         item { Panel(Modifier.fillMaxWidth()) {
@@ -329,8 +324,8 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                 IconButton(onClick=model::refreshChargerAvailability,modifier=Modifier.testTag("refreshAvailability")){Icon(Icons.Outlined.Refresh,"데모 상태 새로고침")}
                 IconButton(onClick={stationOptions=!stationOptions},modifier=Modifier.testTag("availabilitySettings")){Icon(Icons.Outlined.Tune,"추천 안내·데모 설정")}
             }
-            Text(when(recommendations.status) {
-                RecommendationStatus.READY -> "여유와 거리를 고려한 데모 추천"
+            if(recommendations.status!=RecommendationStatus.READY)Text(when(recommendations.status) {
+                RecommendationStatus.READY -> ""
                 RecommendationStatus.NO_DESTINATION -> "목적지 좌표를 확인하면 주변 후보가 표시됩니다."
                 RecommendationStatus.HIGH_SOC -> "SOC 90% 이상으로 추가 충전을 권장하지 않습니다."
                 RecommendationStatus.NO_NEARBY -> if(g.mode==AppMode.MOCK)"목적지 반경 5 km 안에 샘플 충전소가 없습니다. 다른 테스트 목적지를 선택해 보세요."
@@ -345,13 +340,13 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
             }
         } }
         g.mission?.let { m -> item { Panel(Modifier.fillMaxWidth().testTag("activeMission")) {
-            Text(if(m.kind==MissionKind.HOME)"우리 집 충전 참여 중 · ${m.source}" else "미션 진행 중 · ${m.source}",fontWeight=FontWeight.Bold,color=Blue)
+            Text(if(m.kind==MissionKind.HOME)"우리 집 충전 참여 중" else "미션 진행 중",fontWeight=FontWeight.Bold,color=Blue)
             Text(if(m.kind==MissionKind.HOME)g.homeCharge.chargerName ?: "우리 집 충전" else SampleData.stations.firstOrNull{it.id==m.stationId}?.name ?: "충전 미션",fontWeight=FontWeight.SemiBold)
             Text("목적지를 변경해도 이미 시작한 미션은 유지됩니다.",fontSize=13.sp,color=Subtle)
             val baseline=if(m.kind==MissionKind.HOME)m.windowBaselineSoc else m.baselineSoc
             Text(if(baseline==null)"미션 시간 시작 후 배터리를 자동 확인합니다." else "시작 SOC ${baseline.toInt()}% → 완료 조건 ${(baseline+m.requiredGain).toInt()}% · 충전 ON + SOC 2%p 증가")
             LinearProgressIndicator(progress={m.progress},modifier=Modifier.fillMaxWidth(),trackColor=Pale)
-            Text("${(m.progress*100).toInt()}% · 미션 참여 시간 내 조건 충족 시 자동 완료 · 장소 미인증 데모 XP",fontSize=14.sp,color=Subtle)
+            Text("${(m.progress*100).toInt()}% · 조건 달성 시 자동 완료",fontSize=14.sp,color=Subtle)
             TextButton(onClick=model::cancelMission){Text("미션 취소")}
         } } }
         items(recommendations.nearby,key={it.station.id}) { candidate ->
@@ -381,7 +376,7 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                         Text("${Busan.find(station.districtId)?.name} · "+if(station.hourStart==0 && station.hourEnd==24)"미션 상시 참여" else "미션 ${station.windowLabel}",color=Subtle)
                         Text(station.connectors.joinToString(" / "){it.label}+" · "+if(candidate.detourKm!=null)"이탈 %.1f km".format(java.util.Locale.KOREA,candidate.detourKm) else "목적지 직선 %.1f km".format(java.util.Locale.KOREA,candidate.distanceKm),fontSize=14.sp,color=Subtle)
                     }
-                    BadgeText("+${station.xp} 데모 XP",Gold)
+                    BadgeText("+${station.xp} XP",Gold)
                 }
                 ChargerAvailabilityInfo(candidate,g.mode==AppMode.MOCK){scenario->model.setDemoAvailability(station.id,scenario)}
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -389,15 +384,15 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
                         if(starting==station.id) { CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(8.dp)) }
                         Text(buttonLabel)
                     }
-                    OutlinedButton(onClick={model.addWaypoint(station)},enabled=!n.pending,modifier=Modifier.heightIn(min=52.dp).testTag("waypoint-${station.id}")) { Text(if(g.mode==AppMode.MOCK) "경유지 추가 (MOCK)" else "샘플 좌표 경유지 요청") }
-                    TextButton(onClick={model.setDestination(station)},enabled=!n.pending,modifier=Modifier.testTag("destination-${station.id}")){Text(if(g.mode==AppMode.MOCK)"목적지로 설정 (테스트)" else "샘플 좌표로 내비 목적지 요청")}
+                    OutlinedButton(onClick={model.addWaypoint(station)},enabled=!n.pending,modifier=Modifier.heightIn(min=52.dp).testTag("waypoint-${station.id}")) { Text("경유지 추가") }
+                    TextButton(onClick={model.setDestination(station)},enabled=!n.pending,modifier=Modifier.testTag("destination-${station.id}")){Text("목적지 설정")}
                 }
                 TextButton(onClick={leisureStationId=station.id},enabled=allowed,
                     modifier=Modifier.fillMaxWidth().heightIn(min=52.dp).testTag("leisure-${station.id}")) {
                     Icon(Icons.Outlined.Explore,null,Modifier.size(20.dp));Spacer(Modifier.width(9.dp));Text("충전하는 동안 뭐 하지?")
                 }
                 val footnote=when {
-                    done -> "오늘의 보상은 이미 받았어요. 다음 충전소에 참여해 보세요."
+                    done -> ""
                     g.mission?.stationId==station.id -> "위의 진행 카드에서 목표 SOC와 자동 완료 조건을 확인하세요."
                     g.mission!=null -> "진행 중인 미션을 완료하거나 취소한 후 시작할 수 있어요."
                     !hasCharger -> "이용 가능한 호환 충전기가 있는 다른 후보를 확인하세요."
@@ -411,16 +406,17 @@ private val tabIcons=listOf(Icons.Outlined.Home,Icons.Outlined.EvStation,Icons.O
         if(n.hasDestination && recommendations.status!=RecommendationStatus.HIGH_SOC) item {
             Panel(Modifier.fillMaxWidth()) { NearbyStationMap(n.lat!!,n.lon!!,recommendations.nearby) }
         }
-        item { Text("실제 운영시간은 미연동입니다. 기본 미션(삼락 강변·센텀 녹색·광안 해변) 3개를 하루에 완료하면 데모 50 XP 추가.",fontSize=14.sp,color=Subtle) }
         items(g.completionHistory.takeLast(5).reversed()) { e ->
-            Text("개인 +${if(e.personalCredit)e.xp else 0} · 도시 +${if(e.cityCredit)e.xp else 0} XP · ${GameState.day(e.at)} · ${if(e.kind=="DAILY") "일일 보너스" else "데모 충전 성과"}",color=Green)
+            Text("개인 +${if(e.personalCredit)e.xp else 0} · 도시 +${if(e.cityCredit)e.xp else 0} XP · ${GameState.day(e.at)} · ${if(e.kind=="DAILY") "일일 보너스" else "충전 성과"}",color=Green)
         }
     }
     if(connectorDialog && g.mode==AppMode.MOCK)AlertDialog(onDismissRequest={connectorDialog=false},title={Text("데모 차량 커넥터")},
         text={Column { ChargerConnector.entries.forEach{type->TextButton(onClick={model.setDemoConnector(type);connectorDialog=false},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("connector-${type.name}")){Text(type.label)} } }},
         confirmButton={TextButton(onClick={connectorDialog=false}){Text("닫기")}})
     if(allowed && leisureStation!=null)key(leisureStation.id,g.mode) {
-        ChargingLeisureSheet(leisureStation,g,reading,availabilityNow,model.leisurePlaceRepository){leisureStationId=null}
+        ChargingLeisureSheet(leisureStation,g,reading,availabilityNow,model.leisurePlaceRepository,
+            destinationEnabled=g.mode==AppMode.MOCK && !n.pending,
+            onDestination={place->model.setLeisureDestination(leisureStation,place)}){leisureStationId=null}
     }
 }
 @Composable private fun CityScreen(g: GameState) {

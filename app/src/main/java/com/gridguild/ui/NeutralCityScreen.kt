@@ -6,6 +6,8 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
+import android.os.Build
+import android.view.Surface
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -56,7 +58,16 @@ private fun Context.activity(): Activity?=when(this){is Activity->this;is Contex
     DisposableEffect(activity) {
         if(activity!=null) {
             if(model.neutralOriginalOrientation==null)model.neutralOriginalOrientation=activity.requestedOrientation
-            activity.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            // A wm size override can invert the logical orientation relative to the physical panel.
+            // Preserve the direction the user is already viewing on either kind of wide display.
+            @Suppress("DEPRECATION")
+            val display=if(Build.VERSION.SDK_INT>=30)activity.display else activity.windowManager.defaultDisplay
+            val physicallyWide=display?.let {
+                val naturalWide=it.mode.physicalWidth>it.mode.physicalHeight
+                if(it.rotation==Surface.ROTATION_90 || it.rotation==Surface.ROTATION_270)!naturalWide else naturalWide
+            } ?: false
+            activity.requestedOrientation=if(physicallyWide || activity.resources.configuration.orientation==android.content.res.Configuration.ORIENTATION_LANDSCAPE)
+                ActivityInfo.SCREEN_ORIENTATION_LOCKED else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             WindowCompat.setDecorFitsSystemWindows(activity.window,false)
             WindowCompat.getInsetsController(activity.window,activity.window.decorView).apply {
                 systemBarsBehavior=WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -83,7 +94,7 @@ private fun Context.activity(): Activity?=when(this){is Activity->this;is Contex
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(9.dp)) {
                     Text("GridGuild",fontSize=if(compact)24.sp else 29.sp,fontWeight=FontWeight.Bold,color=white,letterSpacing=(-.7).sp)
-                    Text("가상도시 · DEMO",fontSize=12.sp,color=muted)
+                    Text("내 도시",fontSize=12.sp,color=muted)
                 }
                 Column(horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(6.dp)) {
                     Text("${Busan.find(game.districtId)?.name.orEmpty()} · Lv.$level",color=white,fontSize=20.sp,fontWeight=FontWeight.Medium,modifier=Modifier.testTag("neutralGrowth"))
@@ -97,7 +108,7 @@ private fun Context.activity(): Activity?=when(this){is Activity->this;is Contex
             if(!allowed || scene==null) Column(Modifier.align(Alignment.CenterHorizontally).widthIn(max=650.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(14.dp)) {
                 Icon(if(allowed)Icons.Outlined.TravelExplore else Icons.Outlined.Lock,null,tint=muted,modifier=Modifier.size(44.dp))
                 Text(if(allowed)"어느 도시를 둘러볼까요?" else "주차·플랫폼 허용 상태 확인 중",fontSize=25.sp,color=white,fontWeight=FontWeight.SemiBold)
-                Text(if(allowed)"광안리 또는 센텀으로 데모 목적지를 바꾸면\n현재 Lv.$level 도시의 도로 위에 진입합니다." else "허용 상태가 확인되기 전에는 도시를 표시하지 않습니다.",color=muted,fontSize=15.sp)
+                Text(if(allowed)"광안리 또는 센텀으로 목적지를 바꾸면\n현재 Lv.$level 도시의 도로 위에 진입합니다." else "허용 상태가 확인되기 전에는 도시를 표시하지 않습니다.",color=muted,fontSize=15.sp)
             }
             Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 if(allowed && scene!=null) Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.Bottom) {
