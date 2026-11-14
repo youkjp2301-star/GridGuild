@@ -1,19 +1,29 @@
-# GridGuild 1차 제출 검증 기록
+# HU:MOTION · GridGuild 1차 제출 검증 기록
 
-작성일: 2026-11-14. 제출 기준 태그: **`submission-2026-11-15`**.
+작성일: 2026-11-14. 팀명 정정 제출 기준 태그: **`submission-2026-11-15-humotion`**.
 
 ## 제출 정보
 
 | 항목 | 값 |
 |---|---|
+| 팀명 | HU:MOTION |
+| 앱 이름 | GridGuild |
 | 저장소 | https://github.com/youkjp2301-star/GridGuild (Public) |
-| APK 경로 | `apk/GridGuild_GridGuild_release.apk` |
+| APK 경로 | `apk/HU-MOTION_GridGuild_release.apk` |
 | 버전 | 0.14.1 / code16 / `com.gridguild` |
 | 실제 파일 크기 | 86,642,803 bytes (약82.6MiB) |
 | SHA256 | `f03e6b829d400af2473d0c0ed02d32cdc50eb9a4ec00238e6f9ee053031326c6` |
 | 공개 서명 인증서 SHA256 | `f6ba5fa92acc980a5d8ee95eb892f706de5f0c4662e850060f698f6ecea65ebd` |
 
-최종40자리 Commit Hash는 `git rev-parse 'submission-2026-11-15^{commit}'`로 확인한다. 자기 자신의 해시를 같은 커밋 파일에 적을 수 없으므로 고정 태그를 기준으로 삼는다. 업로드 후 로컬 `artifacts/submission-2026/SUBMISSION_RECEIPT.txt`에도 주소·전체 커밋·APK 경로를 별도 기록한다. 이 영수증과 원시 로그는 Git에서 제외한다.
+최종40자리 Commit Hash는 `git rev-parse 'submission-2026-11-15-humotion^{commit}'`로 확인한다. 자기 자신의 해시를 같은 커밋 파일에 적을 수 없으므로 고정 태그를 기준으로 삼는다. 업로드 후 로컬 `artifacts/submission-2026/HU-MOTION_SUBMISSION_RECEIPT.txt`에도 주소·전체 커밋·APK 경로를 별도 기록한다. 이 영수증과 원시 로그는 Git에서 제외한다.
+
+## 팀명·파일명 정정 범위
+
+팀명은 **HU:MOTION**, 앱은 **GridGuild**다. `:`는 Windows 파일명 금지 문자이므로 APK는 `HU-MOTION_GridGuild_release.apk`로 표기한다. 이는 파일시스템 호환을 위한 표기이며 별도 공모전 승인 규칙이라고 주장하지 않는다.
+
+정정 APK는 아래 과거 검증본과 SHA256/바이트/서명이 동일하다. 재빌드·재설치·추가 미션 검사는 하지 않았다. 기존 태그 `submission-2026-11-15`와 커밋은 그대로 보존한다. 아래의 기존 파일명·명령·원격 CI 기록은 검증 당시의 보존 기록이며, 현재 제출에는 위 정정 경로와 새 태그의 해시를 사용한다.
+
+후속 Pleos 확인에서 앱 실행·Mock 미션은 성공했지만, 실제 Vehicle SDK SOC/충전 조회는 R8/Gson TypeToken 오류가 확인됐다. 실제 Navi 종단 및 Android 개발도구가 전혀 없는 새 PC의 최초 설치 과정은 미검증이다. 이번 팀명 정정에서 앱 동작이나 SDK 오류를 수정하지 않았다.
 
 ## 실제 Release 빌드·정적 검사
 

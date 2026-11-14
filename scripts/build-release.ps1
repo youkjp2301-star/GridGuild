@@ -27,7 +27,7 @@ if ($InitializeSigning) {
     $secure | ConvertFrom-SecureString | Set-Content -LiteralPath $encryptedPassword -Encoding ascii
     $env:GRIDGUILD_SIGNING_PASSWORD = [System.Net.NetworkCredential]::new('', $secure).Password
     try {
-        & $keytool -genkeypair -noprompt -keystore $store -storetype PKCS12 -storepass:env GRIDGUILD_SIGNING_PASSWORD -keypass:env GRIDGUILD_SIGNING_PASSWORD -alias gridguild -keyalg RSA -keysize 4096 -validity 10000 -dname 'CN=GridGuild Release, O=GridGuild, C=KR'
+        & $keytool -genkeypair -noprompt -keystore $store -storetype PKCS12 -storepass:env GRIDGUILD_SIGNING_PASSWORD -keypass:env GRIDGUILD_SIGNING_PASSWORD -alias gridguild -keyalg RSA -keysize 4096 -validity 10000 -dname 'CN=GridGuild Release, O=HU:MOTION, C=KR'
         if ($LASTEXITCODE) { throw 'Signing key generation failed. Preserve the directory for diagnosis.' }
     } finally { Remove-Item Env:GRIDGUILD_SIGNING_PASSWORD -ErrorAction SilentlyContinue }
     Write-Output "Created persistent release key outside Git: $store"
@@ -45,8 +45,8 @@ try {
     & "$PSScriptRoot/build.ps1" -Tasks $buildTasks
     if ($Tasks -contains ':app:assembleRelease') {
         New-Item -ItemType Directory -Force "$root/apk" | Out-Null
-        Copy-Item -LiteralPath "$root/app/build/outputs/apk/release/app-release.apk" -Destination "$root/apk/GridGuild_GridGuild_release.apk"
-        Get-FileHash "$root/apk/GridGuild_GridGuild_release.apk" -Algorithm SHA256 | Select-Object Hash,Path
+        Copy-Item -LiteralPath "$root/app/build/outputs/apk/release/app-release.apk" -Destination "$root/apk/HU-MOTION_GridGuild_release.apk"
+        Get-FileHash "$root/apk/HU-MOTION_GridGuild_release.apk" -Algorithm SHA256 | Select-Object Hash,Path
     }
 } finally {
     $env:GRIDGUILD_SIGNING_STORE = $previousStore

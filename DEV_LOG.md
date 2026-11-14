@@ -807,6 +807,36 @@
 4. **실제 빌드/시험:** 후속 CI커밋1938a1d의 GitHub Actions43587772006 최종 success,`:app:assembleDebug :core:test :app:lintDebug` 성공(Gradle2분55초). 로컬 실제 서명 Release 빌드·101단위·외부 Mock QA·리소스/서명·최종 index184파일 비밀정보 검사는 앞 기록대로 성공했다. 이번 문서 전용 커밋은 중복 CI를 건너뛰고 결과만 보존한다.
 5. **남은 오류/다음:** Lint14경고,실제 Navi 종단 및 minified Compose instrumentation 호환성은 후속 과제다. 사용자는 고정 해시/APK 경로/시연 영상을 접수하고 Public 상태를 최소11월23일까지 유지한다. 기존 사용자 AVD와 병행 CHESTER24줄은 보존했다.
 
+## 2026-11-14 — 개발팀 HU:MOTION 정정 및 제출 파일명 갱신
+
+### 1. 현재까지 구현한 기능
+
+- 개발팀을 HU:MOTION으로 명시하고 앱/패키지/저장소 이름 GridGuild는 유지했다. PRD/README/제출 안내의 현재 팀 메타데이터를 정정했다. 원문 기획서와 기존 기록은 보존한다.
+- Windows에서 ASCII콜론을 파일명에 쓸 수 없어 `apk/HU-MOTION_GridGuild_release.apk`로 이름을 정정했다. 팀명 표기는 HU:MOTION이며 파일명만 HU-MOTION이다. 공모전이 해당 치환을 별도 승인했다고 주장하지 않는다.
+- 저장소 삭제·재생성 없이 기존 GitHub origin/main에 새 커밋으로 반영한다. 정정본 태그 `submission-2026-11-15-humotion`을 별도로 만들고 이전 제출 태그/커밋은 그대로 보존한다.
+
+### 2. Pleos SDK 연동 완료·미완료
+
+- 이번 작업은 팀명/파일명/안내 정정이며 앱 코드·SDK 동작·미션을 수정하지 않았다. 기존 SDK 기어P/UX 응답과 SOC/충전 조회의 R8/Gson TypeToken 오류,실제 Navi 종단 미검증 상태를 유지한다. 새PC 최초 설치 검증도 미완료다.
+
+### 3. 변경된 주요 파일
+
+- `README.md`, `PRD.md`, `apk/README.md`, `docs/SUBMISSION_2026.md`: 팀HU:MOTION/앱GridGuild 구분,정정 제출 경로/태그,과거 검증 기록과 현재 한계.
+- `apk/HU-MOTION_GridGuild_release.apk`, `apk/SHA256SUMS.txt`: 기존 서명 Release의 파일명 정정과 동일SHA256.
+- `.gitignore`, `AGENTS.md`, `scripts/build-release.ps1`, `scripts/verify-release.ps1`, `scripts/check-secrets.ps1`: 새파일명만허용/출력/검증. 기존키는재생성하지 않았고 향후 최초키 생성용조직메타데이터만HU:MOTION으로정정했다.
+- 이번 DEV_LOG와 업로드 후 로컬 메일용 제출 영수증. 기존 미커밋 DEV_LOG32줄과 scripts/submission-smoke.py의 이전 호환성 변경은 보존·이번 커밋 제외한다.
+
+### 4. 빌드 및 테스트 결과
+
+- 이름 정정 전/후 APK는 동일한86,642,803바이트,SHA256 `f03e6b829d400af2473d0c0ed02d32cdc50eb9a4ec00238e6f9ee053031326c6`다. 기존APK의 재서명/재빌드/추가설치/미션검사는 하지 않았다.
+- `scripts/verify-release.ps1 -ExpectedSignerSha256 f6ba5fa92acc980a5d8ee95eb892f706de5f0c4662e850060f698f6ecea65ebd` 성공: Release서명/non-debuggable/non-testOnly/패키지com.gridguild/code16/v0.14.1/필수PNG28장 확인.
+- PowerShell구문·최종index184파일 비밀정보·git diff --cached --check 통과. 원격 새경로/태그/다운로드 해시는 업로드 후 별도 영수증에 기록한다. 기존 단위101/MockQA의 성공은 동일바이너리 과거검증이며 이번에 재실행한 결과가 아니다.
+
+### 5. 남은 오류와 다음 개발 작업
+
+- 앱/실제SDK의 기존 한계는 위와 같고 팀명 정정으로 해결됐다고 표시하지 않는다. 콜론의 대체표기는 Windows호환을 위한 것이며 주최측의 별도 승인 규칙은 확인되지 않았다.
+- 정정본의 전체40자리커밋/저장소주소/APK경로/고정다운로드링크를 로컬 영수증과 메일초안에 기록한다. 메일은 사용자가 검토·발송한다. 기존 태그를 이동하거나 이력을 강제로 바꾸지 않는다.
+
 ## 작업 종료 시 갱신 양식
 
 아래 다섯 항목을 실제 결과로 작성하고 관련 코드와 같은 커밋에 포함한다.

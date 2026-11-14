@@ -3,13 +3,15 @@
 전기차 충전 미션으로 부산의 가상 도시를 성장시키는 Kotlin / Jetpack Compose Android 앱.
 마스터 요구사항은 루트 [PRD.md](PRD.md)의 제품 기획서 v2.0이다.
 
-## 공모전 1차 제출 · Release
+## 공모전 1차 제출 · HU:MOTION
 
+- 개발팀: **HU:MOTION**
 - 앱: **GridGuild** — 전기차 충전 미션으로 함께 성장하는 부산의 가상 도시.
-- 제출 APK: [`apk/GridGuild_GridGuild_release.apk`](apk/GridGuild_GridGuild_release.apk). 실제 서명된 Release이며 Debug APK를 이름만 바꾼 파일이 아니다.
-- 제출 기준: **`submission-2026-11-15` 태그**. 제출 이후 개발 커밋과 구분하며 태그를 이동하거나 강제 덮어쓰지 않는다.
-- 공개 저장소: [youkjp2301-star/GridGuild](https://github.com/youkjp2301-star/GridGuild). 신청서의 APK 경로는 `apk/GridGuild_GridGuild_release.apk`다.
-- 설치: Android 9(API28) 이상. `adb -s DEVICE_SERIAL install apk/GridGuild_GridGuild_release.apk` 후 GridGuild 실행 → 지역 선택 → **체험 모드**로 시작한다. 최초 인터넷 로그인/API 키는 필요 없다. 이미 Debug 서명 앱을 쓰는 기기는 그대로 보존하고 **별도의 QA 에뮬레이터**에 설치한다.
+- 제출 APK: [`apk/HU-MOTION_GridGuild_release.apk`](apk/HU-MOTION_GridGuild_release.apk). 실제 서명된 Release이며 Debug APK를 이름만 바꾼 파일이 아니다.
+- 파일명 표기: 팀명은 **HU:MOTION**이며, Windows에서 금지된 `:`만 `-`로 바꿔 파일명에 **HU-MOTION**을 사용한다.
+- 제출 기준: **`submission-2026-11-15-humotion` 태그**. 제출 이후 개발 커밋과 구분하며 태그를 이동하거나 강제 덮어쓰지 않는다.
+- 공개 저장소: [youkjp2301-star/GridGuild](https://github.com/youkjp2301-star/GridGuild). 신청서의 APK 경로는 `apk/HU-MOTION_GridGuild_release.apk`다.
+- 설치: Android 9(API28) 이상. `adb -s DEVICE_SERIAL install apk/HU-MOTION_GridGuild_release.apk` 후 GridGuild 실행 → 지역 선택 → **체험 모드**로 시작한다. 최초 인터넷 로그인/API 키는 필요 없다. 이미 Debug 서명 앱을 쓰는 기기는 그대로 보존하고 **별도의 QA 에뮬레이터**에 설치한다.
 - 시연: 미션 → ROUTE CHARGE → 충전소 선택/참여 → 연결·테스트에서 충전 ON·SOC +2 → 개인/도시 XP와 랭킹 확인. HOME CHARGE는 주거지 최초 등록 후 참여하며 모의 충전 테스트도 지원한다. 실제 P단과 플랫폼 UX 허용 상태에서만 게임을 제공한다.
 - 검증 환경·실행 결과·SHA256·SDK 한계: [제출 검증 기록](docs/SUBMISSION_2026.md). 실제 Pleos 서비스 검사와 일반 Android Mock 검사를 구분한다.
 
@@ -30,6 +32,8 @@ Windows에서는 `powershell -ExecutionPolicy Bypass -File scripts/build-release
 Android Studio/다른 OS에서 같은 Release를 빌드할 때는 `GRIDGUILD_SIGNING_STORE`(기존 PKCS12 경로), `GRIDGUILD_SIGNING_PASSWORD`를 **현재 프로세스 환경에만** 제공한다. `gradlew :app:assembleRelease`를 실행하며 키가 없으면 Release 빌드를 중단한다. `.env`, Gradle 파일, 명령 기록에 비밀번호를 적지 않는다. Debug 빌드에는 이 값이 필요 없다.
 
 충전소·추천 시간·주변 장소·경쟁자/전력망·미인증 보상은 Mock/데모다. 실제 충전 제어·충전 장소 인증·온라인 랭킹·쿠폰 발급·결제는 미연동이다. 상세 범위는 앱의 **체험 모드** 안내와 [SDK 검증 기록](docs/SDK_VERIFICATION.md)을 따른다.
+
+이름 정정본은 기존 서명 Release와 바이트/SHA256이 동일하다. 기존 `submission-2026-11-15` 태그와 이력은 보존하며, 새 정정본의 커밋/태그를 제출에 사용한다.
 
 아래 버전별 기록의 `artifacts/` 경로는 개발 PC의 보존 기록이며 GitHub 제출 APK는 위 `apk/` 경로다.
 
@@ -369,7 +373,7 @@ git push -u origin HEAD
 
 다른 PC에서는 같은 브랜치를 checkout하고 pull한다. 미커밋 변경이 있으면 먼저 확인하고 보관한다.
 충돌이 나면 양쪽 변경을 검토하며 해결한다. `reset --hard`, `clean -fd`, 강제 push로 덮어쓰지 않는다.
-SDK 인증정보·서명 키·`.env`·`local.properties`·`.tools`·IDE 상태·빌드·로컬 테스트 산출물은 `.gitignore`로 제외한다. APK는 공모전 제출 경로 `apk/GridGuild_GridGuild_release.apk`만 명시적으로 추적하며 다른 APK는 제외한다.
+SDK 인증정보·서명 키·`.env`·`local.properties`·`.tools`·IDE 상태·빌드·로컬 테스트 산출물은 `.gitignore`로 제외한다. APK는 공모전 제출 경로 `apk/HU-MOTION_GridGuild_release.apk`만 명시적으로 추적하며 다른 APK는 제외한다.
 Wrapper JAR는 clone 후 빌드에 필요하므로 의도적으로 추적한다. `.gitignore`는 파일 내용 속 비밀정보를 찾아주지 않으므로 커밋 전 검사를 함께 실행한다.
 
 ### GitHub 원격과 제출 버전
@@ -379,7 +383,7 @@ Wrapper JAR는 clone 후 빌드에 필요하므로 의도적으로 추적한다.
 ```powershell
 git remote -v
 git fetch origin --tags
-git rev-parse 'submission-2026-11-15^{commit}'
+git rev-parse 'submission-2026-11-15-humotion^{commit}'
 ```
 
 위 태그가 가리키는 커밋이 1차 제출 기준이다. 이후 기능은 새 커밋/브랜치로 개발하고 제출 태그와 이력은 보존한다. 제출 메일에는 저장소 주소와 해당 명령의 전체40자리 커밋을 적는다. 태그 커밋 내부에 제출 APK가 들어 있으므로 제출 시점 소스와 APK를 함께 내려받을 수 있다.

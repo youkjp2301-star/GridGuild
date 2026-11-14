@@ -1,5 +1,5 @@
 param(
-    [string]$Apk = 'apk/GridGuild_GridGuild_release.apk',
+    [string]$Apk = 'apk/HU-MOTION_GridGuild_release.apk',
     [string]$Sdk,
     [string]$ExpectedSignerSha256
 )
