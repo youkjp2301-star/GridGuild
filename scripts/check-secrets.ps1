@@ -14,6 +14,8 @@ try {
     }
     $findings=@()
     foreach($file in $files) {
+        # Explicit contest deliverable authorized by the project owner; all other APKs stay forbidden.
+        if($file -ceq 'apk/GridGuild_GridGuild_release.apk') { continue }
         if($file -match '(?i)(^|/)(local\.properties|\.env(?:\..*)?|secrets\.properties|credentials\.properties|key\.properties|keystore\.properties|signing\.properties|google-services\.json|agconnect-services\.json)$|\.(jks|keystore|p12|pfx|pem|key|apk|aab|aar)$') {
             if($file -notmatch '\.example$') { $findings+="$file : forbidden tracked filename" }
         }

@@ -3,6 +3,36 @@
 전기차 충전 미션으로 부산의 가상 도시를 성장시키는 Kotlin / Jetpack Compose Android 앱.
 마스터 요구사항은 루트 [PRD.md](PRD.md)의 제품 기획서 v2.0이다.
 
+## 공모전 1차 제출 · Release
+
+- 앱: **GridGuild** — 전기차 충전 미션으로 함께 성장하는 부산의 가상 도시.
+- 제출 APK: [`apk/GridGuild_GridGuild_release.apk`](apk/GridGuild_GridGuild_release.apk). 실제 서명된 Release이며 Debug APK를 이름만 바꾼 파일이 아니다.
+- 제출 기준: **`submission-2026-11-15` 태그**. 제출 이후 개발 커밋과 구분하며 태그를 이동하거나 강제 덮어쓰지 않는다.
+- 공개 저장소: [youkjp2301-star/GridGuild](https://github.com/youkjp2301-star/GridGuild). 신청서의 APK 경로는 `apk/GridGuild_GridGuild_release.apk`다.
+- 설치: Android 9(API28) 이상. `adb -s DEVICE_SERIAL install apk/GridGuild_GridGuild_release.apk` 후 GridGuild 실행 → 지역 선택 → **체험 모드**로 시작한다. 최초 인터넷 로그인/API 키는 필요 없다. 이미 Debug 서명 앱을 쓰는 기기는 그대로 보존하고 **별도의 QA 에뮬레이터**에 설치한다.
+- 시연: 미션 → ROUTE CHARGE → 충전소 선택/참여 → 연결·테스트에서 충전 ON·SOC +2 → 개인/도시 XP와 랭킹 확인. HOME CHARGE는 주거지 최초 등록 후 참여하며 모의 충전 테스트도 지원한다. 실제 P단과 플랫폼 UX 허용 상태에서만 게임을 제공한다.
+- 검증 환경·실행 결과·SHA256·SDK 한계: [제출 검증 기록](docs/SUBMISSION_2026.md). 실제 Pleos 서비스 검사와 일반 Android Mock 검사를 구분한다.
+
+### 새 PC에서 개발하기
+
+1. Git과 Android Studio, **JDK17**, Android SDK Platform35/Build Tools35.0.0/Platform Tools를 설치한다. SDK 경로는 각 PC의 `local.properties` 또는 `ANDROID_HOME`에만 지정한다.
+2. 이 저장소를 Clone하고 Android Studio에서 루트 폴더를 연다. Gradle JDK를17로 선택한다. Gradle Wrapper8.10.2가 의존성을 다운로드한다.
+3. `./gradlew :app:assembleDebug :core:test :app:lintDebug`로 빌드한다(Windows는 `gradlew.bat`). 일반 Android API34 에뮬레이터에서 `app`의 Debug 실행과 Mock 개발을 바로 이어갈 수 있다.
+4. 실제 차량 SDK 검사는 **Pleos Connect 에뮬레이터 v2.1.0 / Android Automotive API34 / x86_64**, 이 프로젝트의 Pleos AVD 화면 **1920×1080px / 160dpi**, RAM4GB 설정을 기준으로 한다. 공식 이미지는 별도 설치하며 SDK/AVD/인증정보는 Clone에 포함하지 않는다. Vehicle2.3.2/NaviHelper3.0.5는 공식 Maven 의존성이다.
+5. 작업 전에 `git pull --ff-only`, 종료 시 DEV_LOG 갱신 → 보안 검사 → commit/push한다. 기존 AVD 초기화와 앱 데이터 삭제는 필요 없다.
+
+### Release 재빌드와 서명 키 보호
+
+Windows에서는 `powershell -ExecutionPolicy Bypass -File scripts/build-release.ps1`을 사용한다. 최초 서명 키 생성은 **아직 Release를 발급한 적 없는 새 프로젝트에서만** `-InitializeSigning`으로 수행한다. 이 프로젝트는 이미 고정 Release 키가 있으므로 다시 만들지 않는다.
+
+키는 사용자 프로필의 `.gridguild/signing/`에 별도 보관한다. 비밀번호는 Windows 계정에 결속된 DPAPI 암호문이며 소스·APK·GitHub에 포함하지 않는다. 폴더를 다른 PC로 복사하는 것만으로 DPAPI 암호문이 복호화되지는 않는다. 다른 PC에서는 우선 Debug로 개발하고, 기존 키와 비밀번호를 안전하게 이전한 환경에서만 같은 서명의 Release를 발급한다. 키/비밀번호의 별도 안전한 백업이 필요하다.
+
+Android Studio/다른 OS에서 같은 Release를 빌드할 때는 `GRIDGUILD_SIGNING_STORE`(기존 PKCS12 경로), `GRIDGUILD_SIGNING_PASSWORD`를 **현재 프로세스 환경에만** 제공한다. `gradlew :app:assembleRelease`를 실행하며 키가 없으면 Release 빌드를 중단한다. `.env`, Gradle 파일, 명령 기록에 비밀번호를 적지 않는다. Debug 빌드에는 이 값이 필요 없다.
+
+충전소·추천 시간·주변 장소·경쟁자/전력망·미인증 보상은 Mock/데모다. 실제 충전 제어·충전 장소 인증·온라인 랭킹·쿠폰 발급·결제는 미연동이다. 상세 범위는 앱의 **체험 모드** 안내와 [SDK 검증 기록](docs/SDK_VERIFICATION.md)을 따른다.
+
+아래 버전별 기록의 `artifacts/` 경로는 개발 PC의 보존 기록이며 GitHub 제출 APK는 위 `apk/` 경로다.
+
 ## 0.14.1 — 내 도시와 랭킹 레벨 일치
 
 - 내 지역 랭킹에서 가상 기본 점수를 제외하고, 내 도시와 같은 누적 도시 XP로 레벨을 표시한다. 월간 랭킹 점수와 누적 성장 레벨을 분리해 필터를 바꿔도 레벨이 유지된다.
@@ -277,17 +307,17 @@ SDK 값·콜백을 제한 시간 내 받지 못하면 실패 메시지를 기록
 
 1. Git, Android Studio, JDK **17**을 설치한다. Android Studio에 포함된 JBR 버전이 다르면 Gradle JDK를 별도로 17로 지정한다.
 2. Android Studio SDK Manager에서 Android SDK Platform **35**, Build Tools **35.0.0**, Platform Tools를 설치하고 Android SDK 라이선스를 확인한다.
-3. 본인 GitHub 계정으로 비공개 저장소 접근을 설정한다. HTTPS의 Git Credential Manager 또는 SSH 키를 사용하고, 토큰·비밀번호를 저장소 파일이나 원격 URL에 넣지 않는다.
+3. 공개 소스를 읽는 데 로그인은 필요 없다. push할 PC에서는 본인 GitHub 계정의 HTTPS Git Credential Manager 또는 SSH 키를 사용하고, 토큰·비밀번호를 저장소 파일이나 원격 URL에 넣지 않는다.
 4. 저장소를 clone하고 Android Studio에서 폴더를 연다.
 
 ```powershell
-git clone https://github.com/YOUR_ACCOUNT/GridGuild.git
+git clone https://github.com/youkjp2301-star/GridGuild.git
 cd GridGuild
 git config user.name "YOUR_NAME"
 git config user.email "YOUR_COMMIT_EMAIL"
 ```
 
-위 URL과 이름·이메일은 예시다. 실제 생성된 **비공개** 저장소 주소와 본인 정보를 사용한다.
+위 이름·이메일은 예시다. 본인 Git 작성자 정보를 사용한다.
 Android Studio의 Settings → Build Tools → Gradle에서 Gradle JDK **17**을 선택한다.
 `local.properties`는 각 PC의 Android Studio가 생성하며 공유하지 않는다. 필요한 경우 각 PC에서만 다음 형식으로 만든다.
 
@@ -325,7 +355,7 @@ git status
 git pull --ff-only
 
 # 기능 작업은 별도 브랜치 권장
-git switch -c feat/YOUR_TASK
+git switch -c codex/YOUR_TASK
 
 # 종료: DEV_LOG.md 갱신 후 검증·검토
 .\gradlew.bat :app:assembleDebug :core:test :app:lintDebug
@@ -339,25 +369,17 @@ git push -u origin HEAD
 
 다른 PC에서는 같은 브랜치를 checkout하고 pull한다. 미커밋 변경이 있으면 먼저 확인하고 보관한다.
 충돌이 나면 양쪽 변경을 검토하며 해결한다. `reset --hard`, `clean -fd`, 강제 push로 덮어쓰지 않는다.
-SDK 인증정보·서명 키·`.env`·`local.properties`·`.tools`·IDE 상태·APK·빌드·로컬 테스트 산출물은 `.gitignore`로 제외한다.
+SDK 인증정보·서명 키·`.env`·`local.properties`·`.tools`·IDE 상태·빌드·로컬 테스트 산출물은 `.gitignore`로 제외한다. APK는 공모전 제출 경로 `apk/GridGuild_GridGuild_release.apk`만 명시적으로 추적하며 다른 APK는 제외한다.
 Wrapper JAR는 clone 후 빌드에 필요하므로 의도적으로 추적한다. `.gitignore`는 파일 내용 속 비밀정보를 찾아주지 않으므로 커밋 전 검사를 함께 실행한다.
 
-### GitHub 비공개 저장소 연결 단계
+### GitHub 원격과 제출 버전
 
-현재는 로컬 `main` 저장소만 준비하며 원격 생성·업로드는 수행하지 않았다.
-
-1. 본인 GitHub 계정으로 로그인하고 New repository에서 **Private**를 선택한다. 조직 저장소라면 생성 권한을 확인한다.
-2. 기존 로컬 프로젝트를 올릴 때 GitHub에서 README/.gitignore/라이선스를 추가 생성하지 않아 초기 이력 충돌을 피한다.
-3. 각 PC에서 Git 작성자 이름·이메일과 GitHub 인증을 설정한다. 이 PC에는 사용자가 알려준 작성자 정보를 로컬로 설정했다. GitHub CLI와 원격 저장소는 아직 설정하지 않았다.
-4. 실제 저장소 URL을 확인한 뒤 연결한다.
+원격 `origin`은 아래 공개 저장소다. 이미 Clone했다면 원격을 다시 추가하거나 중복 저장소를 만들 필요가 없다.
 
 ```powershell
-git remote add origin https://github.com/YOUR_ACCOUNT/GridGuild.git
-git add .
-powershell -ExecutionPolicy Bypass -File scripts/check-secrets.ps1
-git commit -m "Initialize GridGuild MVP"
-git push -u origin main
+git remote -v
+git fetch origin --tags
+git rev-parse 'submission-2026-11-15^{commit}'
 ```
 
-이미 origin이 있으면 `git remote -v`로 먼저 확인하고 임의로 교체하지 않는다.
-GitHub 저장소 생성 또는 이 에이전트를 통한 인증·업로드가 필요하면 계정·저장소 이름·Private 여부와 실행 승인을 확인한 뒤 진행한다.
+위 태그가 가리키는 커밋이 1차 제출 기준이다. 이후 기능은 새 커밋/브랜치로 개발하고 제출 태그와 이력은 보존한다. 제출 메일에는 저장소 주소와 해당 명령의 전체40자리 커밋을 적는다. 태그 커밋 내부에 제출 APK가 들어 있으므로 제출 시점 소스와 APK를 함께 내려받을 수 있다.

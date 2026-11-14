@@ -26,6 +26,7 @@ desktop.ini
 
 # Android build products and locally downloaded SDK/toolchains
 *.apk
+!apk/GridGuild_GridGuild_release.apk
 *.aab
 *.ap_
 *.dex

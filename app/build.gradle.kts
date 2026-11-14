@@ -22,6 +22,33 @@ android {
     kotlinOptions { jvmTarget = "17" }
     useLibrary("android.car")
     testOptions { animationsDisabled = true }
+    // Release credentials exist only in the invoking process, never in source control.
+    val releaseStore = providers.environmentVariable("GRIDGUILD_SIGNING_STORE").orNull
+    val releasePassword = providers.environmentVariable("GRIDGUILD_SIGNING_PASSWORD").orNull
+    val hasReleaseSigning = !releaseStore.isNullOrBlank() && !releasePassword.isNullOrBlank()
+    if (hasReleaseSigning) {
+        signingConfigs.create("submission") {
+            storeFile = file(releaseStore!!)
+            storeType = "PKCS12"
+            storePassword = (releasePassword)
+            keyAlias = "gridguild"
+            keyPassword = (releasePassword)
+        }
+    }
+    buildTypes {
+        getByName("release") {
+            isDebuggable = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (hasReleaseSigning) signingConfig = signingConfigs.getByName("submission")
+        }
+    }
+    gradle.taskGraph.whenReady {
+        if (!hasReleaseSigning && allTasks.any { it.project == project && it.name.contains("Release") }) {
+            throw GradleException("Release signing is required. Use scripts/build-release.ps1; see README.md.")
+        }
+    }
 }
 dependencies {
     implementation(project(":core"))

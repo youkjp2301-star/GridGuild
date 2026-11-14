@@ -755,6 +755,42 @@
 - 다른 지역은 샘플 경쟁 점수이며 실제 지역 서버 총합은 미연동이다. 소속을 바꾸면 새 내 지역에만 샘플 기본값을 제외하는 MVP 경계를 유지한다. 원장/보상·SDK·이전 환경 한계는 이번 수정으로 해결된 것으로 주장하지 않는다.
 - GitHub 원격/인증 미설정으로 push는 하지 않는다. 소스·검사·문서만 비밀정보/diff 검사 후 로컬 커밋하며 기존 병행 CHESTER24줄은 보존·제외한다.
 
+## 2026-11-14 — 공모전 1차 제출용 서명 Release·GitHub 준비
+
+### 1. 현재까지 구현한 기능
+
+- 기존 앱0.14.1/code16의 UI·미션·SOC·XP·도시·랭킹·저장·안전 로직을 유지하며 실제 PKCS12 Release 서명과 R8/리소스 축소를 추가했다. 소스/기획서/원본 이미지와 기존 AVD 데이터는 보존했다.
+- 제출용 `apk/GridGuild_GridGuild_release.apk`를 생성했다. 해당 경로만 Git 산출물 제외 규칙의 명시적 예외로 관리하며 개인 키·비밀번호·로컬 설정은 계속 제외한다.
+- GitHub 사용자의 device 인증 완료, Public `https://github.com/youkjp2301-star/GridGuild` 생성·origin 연결. 제출본은 고정 태그 `submission-2026-11-15`와 같은 커밋의 소스/APK로 보존하며 전체 커밋 번호는 업로드 검증 후 별도 영수증에 기록한다.
+- 새 PC의 Clone/Debug 실행·Pleos 환경·Release 재빌드/서명 보호·후속 pull/commit/push 절차를 README에 정리했다.
+
+### 2. Pleos SDK 연동 완료·미완료
+
+- Vehicle2.3.2/NaviHelper3.0.5 공식 Maven·typed 코드·Release 컴파일 유지. 기존 공식 Pleos Vehicle 값/P/UX 성공 기록과 실제 Navi 콜백 타임아웃·경유지 종단 미검증 상태를 그대로 유지한다.
+- 이번 Release 실기능 검사는 일반 Android API34의 Mock QA다. 실제 Pleos 충전 변화/위치·계통/온라인 랭킹/내비 성공으로 표시하지 않는다. 실제 P+CarUxRestrictions 보호를 완화하지 않았다.
+
+### 3. 변경된 주요 파일
+
+- `app/build.gradle.kts`, `app/proguard-rules.pro`: 환경 변수 기반 서명, Release 축소, SDK/앱 경계 유지.
+- `scripts/build-release.ps1`, `verify-release.ps1`, `submission-smoke.py`, `check-secrets.ps1`: 외부 키/DPAPI·APK 검사·대상 QA 한정 UI 검사·정확한 제출 APK 예외.
+- `.gitignore`, `AGENTS.md`, `README.md`, `docs/SUBMISSION_2026.md`, `docs/TEST_REPORT.md`, `docs/submission/`: 제출/협업 지침과 실제 화면 검증.
+- `apk/GridGuild_GridGuild_release.apk`, `apk/README.md`, `apk/SHA256SUMS.txt`: 실제 제출 파일과 해시.
+
+### 4. 빌드 및 테스트 결과
+
+- `:app:assembleRelease :app:lintRelease` 성공, Lint0오류/14경고. `:core:cleanTest :core:test`101개 통과/실패0/오류0.
+- APK86,642,803바이트, SHA256 `f03e6b829d400af2473d0c0ed02d32cdc50eb9a4ec00238e6f9ee053031326c6`. apksigner 서명 검증·non-debuggable/non-testOnly·필수 PNG28장 검사 통과. 최종 재빌드 후 같은 SHA256 유지.
+- 새 `GridGuild_Submission_QA_API34`(1280×800/160dpi) 설치 Success. 실제 일반 Release에서 사상구0XP/SOC42 → ROUTE ON/+2로120XP/Lv2 → HOME 등록·목표80/출발07:30·참여 후 ON/+2로240XP/Lv2 확인.
+- 내 도시/지역 월간 랭킹 Lv2·누적240XP, 누적 필터240XP, 개인240XP 확인. 일반 프로세스 종료/재실행 후 집 설정·완료·240XP/Lv2 저장 유지, D 시뮬레이션 게임 차단/P 복귀 성공. 원본 AVD와 기존 사용자 데이터에는 설치·초기화를 하지 않았다.
+- minified Release의 Compose instrumentation은 AndroidJUnitRunner 시작 중 `androidx.tracing.Trace` 공유 클래스 누락으로 실패했다. 성공으로 집계하지 않고 실험 설정/파일은 최종 소스에서 제외했다. 외부 ADB/UIAutomator의 실제 화면 검사로 위 흐름을 확인했다. QA 검은 초기 캡처는 화면 꺼짐 상태로, 깨운 후 정상 표시했으며 재부팅하지 않았다. QA System UI/전화 종료·ANR은 관찰되지 않았다.
+- 기존20커밋/371blob 중 텍스트331개 보안 검사에서 비밀정보 패턴0, 기존 사진 라이선스/해시 일치. 최종 index184파일 비밀정보 검사·git diff --cached --check·Release 검사를 통과했다. 병행 CHESTER 미커밋24줄은 작업 파일에 보존하고 이번 커밋에서 제외한다.
+
+### 5. 남은 오류와 다음 개발 작업
+
+- 실제 Navi 목적지/경유지/재탐색 및 Release에서의 실제 Pleos 충전 변화 종단 검증은 미완료다. 기존 Lint14경고와 최적화 Release용 Compose instrumentation 호환성은 별도 후속 과제다.
+- 제출 태그를 강제로 변경하지 않고 후속 개발은 새 커밋으로 진행한다. 키와 DPAPI 암호문은 프로젝트 밖에 보관하며 다른 PC의 Release 발급에는 기존 키/비밀번호의 안전한 이전이 필요하다.
+- 사용자는 저장소 주소·최종40자리 해시·APK 경로와 시연 영상을 신청서/접수 메일에 제출하고, 공개 상태를 최소2026-11-23까지 유지한다. 메일/신청서 발송은 이 작업에서 수행하지 않는다.
+
 ## 작업 종료 시 갱신 양식
 
 아래 다섯 항목을 실제 결과로 작성하고 관련 코드와 같은 커밋에 포함한다.

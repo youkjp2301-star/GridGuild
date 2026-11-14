@@ -241,3 +241,11 @@
 - schema1/2→3 및 집 설정·HOME 미션의 비어 있는 야간 기준 SOC 왕복 저장을 확인했다. 일반 앱에서도 등록 뒤 프로세스를 종료/재실행해 이름 자동 복원을 확인하고, 선택 출발08:00에서23~03시 예시 표시를 확인했다.
 - 테스트 전 사용자 기록을 백업하고 종료 후 원래 파일 복원 직후 SHA256 일치를 확인했다. 원래 기록으로0.6.0 재실행·HOME 화면 표시 확인. 이후 저장 형식3으로 정상 이행한다.
 - 실제 Home Vehicle SDK 충전 변화 종단 검증은 수행하지 않았다. 기존 Vehicle 현재값 성공/Navi 목적지 콜백 미수신 상태를 유지한다. 캡처는 Git 제외 `artifacts/home-charge/`, 상세 정책/상시 관찰 한계는 `docs/HOME_CHARGE.md`다.
+
+## 2026-11-14 · 공모전 실제 서명 Release 검증
+
+- Release0.14.1/code16, 실제 PKCS12 서명·R8·리소스 축소, APK86,642,803바이트. SHA256 및 서명/리소스 검사는 [제출 기록](SUBMISSION_2026.md)을 따른다.
+- `:app:assembleRelease :app:lintRelease` 성공(Lint0오류/14경고), `:core:cleanTest :core:test`101개 전부 통과.
+- 신규 제출 QA API34/1280×800에서 실제 제출 APK 설치·일반 실행 성공. 외부 ADB/UIAutomator로 지역 선택, ROUTE120XP/Lv2, HOME 설정80%/07:30·참여 후 총240XP/Lv2, 지역/개인 랭킹 반영, 프로세스 재실행 저장 유지, D차단/P복귀를 확인했다. 기존 AVD/사용자 데이터 초기화 없음.
+- Compose minified instrumentation은 runner의 공유 tracing 클래스 누락으로 화면 이전에 실패했다. 통과로 집계하지 않으며 실험 파일/설정은 최종 소스에 포함하지 않는다. 외부 검사와 단위 테스트 결과를 구분한다.
+- 실제 Pleos Release 차량/내비 종단 성공을 새로 검증한 것은 아니다. 기존 실제 Navi 타임아웃/미검증 상태와 Mock 경계 유지. QA SystemUI/전화 종료·ANR은 관찰되지 않았다.
