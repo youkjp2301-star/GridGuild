@@ -799,6 +799,14 @@
 4. **실제 검사:** 첫 GitHub Actions는 앱 빌드 이전 `setup-android@v3`가 폐기된 `tools` 패키지를 받으려다 `Failed to find package tools`로 실패했다. 공식 action.yml/README에서 기본값과 원인을 확인하고 packages 입력으로 교체했다. git diff --check·최종 보안 검사 후 push하고 원격 CI를 확인한다. 기존 Release/101단위/실제 Mock QA 성공을 CI 초기 환경 실패와 혼합하지 않는다.
 5. **남은 작업:** 수정한 CI의 실제 원격 실행 결과를 확인한다. 제출 기준은 main의 후속 CI 커밋과 구분해 원래 고정 태그의40자리 해시를 사용한다. 병행 CHESTER24줄은 보존·커밋 제외한다.
 
+## 2026-11-14 — 원격 전송·CI 최종 성공 기록
+
+1. **현재 기능/제출:** Public 저장소의 소스·APK 업로드,태그의 제출 커밋 및 실제 다운로드 SHA256 일치 확인 완료.1차 제출 커밋은 `3f7ac7088f8fa87d6aff7e0a9de579eea3e9db6d`로 보존하고 CI 수정/이번 검증 기록은 후속 커밋으로 남긴다.
+2. **SDK:** 새 Ubuntu/JDK17에서 공식 Maven 의존성으로 앱 Debug 컴파일 성공. 실제 Pleos 내비/차량 Release 종단 미검증 상태는 바꾸지 않았다.
+3. **주요 파일:** `docs/SUBMISSION_2026.md`의 원격 확인 항목,이번 DEV_LOG 항목. 앱/서명/APK 변경 없음.
+4. **실제 빌드/시험:** 후속 CI커밋1938a1d의 GitHub Actions43587772006 최종 success,`:app:assembleDebug :core:test :app:lintDebug` 성공(Gradle2분55초). 로컬 실제 서명 Release 빌드·101단위·외부 Mock QA·리소스/서명·최종 index184파일 비밀정보 검사는 앞 기록대로 성공했다. 이번 문서 전용 커밋은 중복 CI를 건너뛰고 결과만 보존한다.
+5. **남은 오류/다음:** Lint14경고,실제 Navi 종단 및 minified Compose instrumentation 호환성은 후속 과제다. 사용자는 고정 해시/APK 경로/시연 영상을 접수하고 Public 상태를 최소11월23일까지 유지한다. 기존 사용자 AVD와 병행 CHESTER24줄은 보존했다.
+
 ## 작업 종료 시 갱신 양식
 
 아래 다섯 항목을 실제 결과로 작성하고 관련 코드와 같은 커밋에 포함한다.

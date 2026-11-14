@@ -81,3 +81,10 @@ Mock 차량의 SOC/충전 스위치는 프로세스 재시작 시 초기42%/OFF�
 - 최종 stage184파일에 `scripts/check-secrets.ps1`를 실행해 통과했다. APK는 사용자 승인된 정확한 제출 경로만 허용하며 키·비밀번호·SDK/로컬 설정·다른 빌드 산출물은 제외한다.
 - 기존 전체 Git 이력을 유지하고1차 제출 태그를 이동/강제 변경하지 않는다. 이후 개발은 새 커밋으로 진행한다. 두 PC 모두 시작 전 pull,종료 시 DEV_LOG와 함께 commit/push한다.
 - 공개 저장소는 최소2026-11-23까지 공개 상태를 유지한다(사용자 제공 공모전 규정). 신청서/메일 발송과 시연 영상 최종 제출은 사용자가 수행한다.
+
+## 원격 업로드·깨끗한 CI 환경 최종 확인
+
+- Public 저장소에서 제출 태그를 조회해 원래 제출 커밋 `3f7ac7088f8fa87d6aff7e0a9de579eea3e9db6d`를 확인했다. 해당 커밋의 APK Git blob은 `14e3b43368c704adccb5798ddc343c74e6449331`,크기86,642,803바이트이며 실제 원격 다운로드 SHA256도 위 제출본과 일치했다.
+- 첫 CI는 앱 코드 실행 전에 폐기된 Android `tools` 설치로 실패했다. 제출 태그를 바꾸지 않고 후속 커밋 `1938a1de57aefb4492edfc454cf3c1b718e575c6`에서 workflow의 SDK 패키지만 수정했다. 앱 소스·서명·제출 APK는 동일하다.
+- [GitHub Actions 실제 성공 기록](https://github.com/youkjp2301-star/GridGuild/actions/runs/43587772006): 새 Ubuntu/JDK17 환경에서 checkout/SDK설치/`:app:assembleDebug :core:test :app:lintDebug` **성공**,Gradle2분55초. CI는 개인 Release 키를 받지 않으며 로컬 서명 Release 검사와 구분한다.
+- main은 이후 CI/검증 문서 커밋으로 진행할 수 있다. 신청서와 메일의1차 기준 해시는 위 고정 제출 태그의40자리를 사용한다. 태그와 제출 APK는 이동·덮어쓰기하지 않았다.
