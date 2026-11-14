@@ -791,6 +791,14 @@
 - 제출 태그를 강제로 변경하지 않고 후속 개발은 새 커밋으로 진행한다. 키와 DPAPI 암호문은 프로젝트 밖에 보관하며 다른 PC의 Release 발급에는 기존 키/비밀번호의 안전한 이전이 필요하다.
 - 사용자는 저장소 주소·최종40자리 해시·APK 경로와 시연 영상을 신청서/접수 메일에 제출하고, 공개 상태를 최소2026-11-23까지 유지한다. 메일/신청서 발송은 이 작업에서 수행하지 않는다.
 
+## 2026-11-14 — 제출 태그 보존 후 GitHub CI 환경 수정
+
+1. **구현:** 제출 커밋 `3f7ac7088f8fa87d6aff7e0a9de579eea3e9db6d`와 `submission-2026-11-15`는 그대로 보존한다. GitHub main/태그의 원격 커밋과 APK blob/크기를 확인했고 실제 원격 다운로드 SHA256이 로컬 제출본과 일치했다. 이후 수정은 별도 후속 커밋이다.
+2. **SDK:** 앱·Pleos SDK·서명·APK는 변경하지 않았다. CI에 필요한 Android Platform35/Build Tools35.0.0/Platform Tools만 명시한다.
+3. **주요 파일:** `.github/workflows/android.yml`,이번 DEV_LOG 항목.
+4. **실제 검사:** 첫 GitHub Actions는 앱 빌드 이전 `setup-android@v3`가 폐기된 `tools` 패키지를 받으려다 `Failed to find package tools`로 실패했다. 공식 action.yml/README에서 기본값과 원인을 확인하고 packages 입력으로 교체했다. git diff --check·최종 보안 검사 후 push하고 원격 CI를 확인한다. 기존 Release/101단위/실제 Mock QA 성공을 CI 초기 환경 실패와 혼합하지 않는다.
+5. **남은 작업:** 수정한 CI의 실제 원격 실행 결과를 확인한다. 제출 기준은 main의 후속 CI 커밋과 구분해 원래 고정 태그의40자리 해시를 사용한다. 병행 CHESTER24줄은 보존·커밋 제외한다.
+
 ## 작업 종료 시 갱신 양식
 
 아래 다섯 항목을 실제 결과로 작성하고 관련 코드와 같은 커밋에 포함한다.
